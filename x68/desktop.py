@@ -695,6 +695,10 @@ class Studio:
    _,name,result,error,done=item;self.busy=False
    self.logs.append({'time':datetime.now().astimezone().isoformat(),'operation':name,'error':error})
    if error:
+    try:
+     (WORK/'reports').mkdir(parents=True,exist_ok=True)
+     with open(WORK/'reports/errors.log','a',encoding='utf-8') as log:log.write(datetime.now().astimezone().isoformat(timespec='seconds')+'  '+name+': '+error+'\n')
+    except OSError:pass
     self.status.set(error if name=='Finding X68' and 'Input Monitoring' in error else 'Operation failed. Check the connection; details are in Advanced.')
     if name=='Finding X68':self.inventory=None;self.device.set('[ ]  X68 NOT CONNECTED');self.usb_mode.set('Not connected');self.connect_button.configure(text='Connect',state='normal');self.next_reconnect=time.monotonic()+5
     if name=='Reading battery':self.history.record(error=error);self.next_battery=time.monotonic()+5
