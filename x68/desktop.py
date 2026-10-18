@@ -423,7 +423,7 @@ class Studio:
   try:self.knowledge=(ASSETS/'docs/AI-KNOWLEDGE.md').read_text(encoding='utf-8')
   except OSError:self.knowledge='Knowledge file missing. Use the complete application folder.'
   text.insert('1.0',self.knowledge);text.configure(state='disabled')
- def knowledge_record(self):return {'application':'VGN X68 Custom Firmware','version':'0.6.0','custom_crc':BATTERY_DIAGNOSTIC_CRC,'format':'Markdown','context':self.knowledge,'unknowns':['Battery current and charge control (voltage is an estimate via an inferred 1:2 divider)','Early SUBOR splash storage','Physical macOS validation','Custom-media physical validation pending']}
+ def knowledge_record(self):return {'application':'VGN X68 Custom Firmware','version':'0.6.1','custom_crc':BATTERY_DIAGNOSTIC_CRC,'format':'Markdown','context':self.knowledge,'unknowns':['Battery current and charge control (voltage is an estimate via an inferred 1:2 divider)','Early SUBOR splash storage','Physical macOS validation','Custom-media physical validation pending']}
  def copy_knowledge(self):self.root.clipboard_clear();self.root.clipboard_append(self.knowledge);self.status.set('AI context copied to clipboard.')
  def export_knowledge(self):
   path=filedialog.asksaveasfilename(parent=self.root,initialfile='X68-AI-KNOWLEDGE.md',defaultextension='.md',filetypes=[('Markdown','*.md')])

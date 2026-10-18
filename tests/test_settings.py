@@ -3,7 +3,7 @@ import unittest
 
 from x68.protocol import ProtocolError
 from x68.settings import (settings_packet, encode_lighting, compile_macro, parse_macro_bank,
-                          replace_macro, macro_text, keymap_entries)
+                          replace_macro, macro_text, keymap_entries, HID_KEYS)
 
 
 class SettingsTests(unittest.TestCase):
@@ -74,6 +74,13 @@ class SettingsTests(unittest.TestCase):
     def test_invalid_existing_bank_prevents_replacement(self):
         with self.assertRaises(ProtocolError):
             replace_macro(bytes(4096), 0, compile_macro('A'))
+
+    def test_f13_to_f24_use_hid_usages_and_decode_back(self):
+        self.assertEqual([HID_KEYS[f"F{i}"] for i in range(13, 25)], list(range(0x68, 0x74)))
+        data = bytearray(384)
+        data[0:3] = bytes([32, 0, HID_KEYS["F17"]])
+        self.assertEqual(keymap_entries(bytes(data))[0]["name"], "F17")
+        self.assertIn(bytes([138, HID_KEYS["F17"]]), compile_macro("F17"))
 
     def test_fn_and_reserved_cells_are_not_editable(self):
         mapping = bytearray(384)

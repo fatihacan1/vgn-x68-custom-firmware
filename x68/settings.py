@@ -34,6 +34,9 @@ HID_KEYS.update({"0": 39, "ENTER": 40, "ESC": 41, "BACKSPACE": 42, "TAB": 43,
                  "DELETE": 76, "END": 77, "PAGEDOWN": 78,
                  "RIGHT": 79, "LEFT": 80, "DOWN": 81, "UP": 82})
 HID_KEYS.update({f"F{i}": i+57 for i in range(1, 13)})
+# F13-F24 (0x68-0x73): no physical key, so apps like Discord see only this bind.
+# The X68 NKRO report bitmap ends at 0x70 (F21); F22-F24 rely on the boot report.
+HID_KEYS.update({f"F{i}": i+91 for i in range(13, 25)})
 NAMES = {v: k for k, v in HID_KEYS.items()}
 MOD_NAMES = {v << 8: k for k, v in MODIFIERS.items()}
 MODES = [(1, "Wave"), (2, "Colour cloud"), (3, "Vortex"), (4, "Spectrum"), (5, "Breathing"), (6, "Solid"), (7, "Reactive"), (8, "Ripple"), (9, "Trail"), (10, "Stars"), (11, "Flowers"), (12, "Scroll"), (13, "Wings"), (14, "Build up"), (15, "Rain"), (16, "Scan"), (17, "Spread"), (18, "Fast wave"), (19, "Custom table"), (20, "Off")]
