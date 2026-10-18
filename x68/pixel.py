@@ -31,15 +31,33 @@ HUGE = ('Press Start 2P', -40)
 
 
 def load_fonts(folder):
-    """Register the bundled fonts for this process only (Windows). Elsewhere Tk falls back."""
-    if sys.platform != 'win32':
+    """Register the bundled fonts for this process only (Windows, macOS). Elsewhere Tk falls back."""
+    if sys.platform not in ('win32', 'darwin'):
         return False
     import ctypes
     ok = True
     for name in ('DotGothic16-Regular.ttf', 'PressStart2P-Regular.ttf'):
         path = Path(folder) / name
-        ok &= path.exists() and ctypes.windll.gdi32.AddFontResourceExW(str(path), 0x10, 0) > 0
+        ok &= path.exists() and (ctypes.windll.gdi32.AddFontResourceExW(str(path), 0x10, 0) > 0
+                                 if sys.platform == 'win32' else _register_mac_font(path))
     return ok
+
+
+def _register_mac_font(path):
+    # CoreText process scope; must run before Tk resolves the font names.
+    import ctypes, ctypes.util
+    cf = ctypes.cdll.LoadLibrary(ctypes.util.find_library('CoreFoundation'))
+    ct = ctypes.cdll.LoadLibrary(ctypes.util.find_library('CoreText'))
+    cf.CFURLCreateFromFileSystemRepresentation.restype = ctypes.c_void_p
+    cf.CFURLCreateFromFileSystemRepresentation.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_long, ctypes.c_bool]
+    ct.CTFontManagerRegisterFontsForURL.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_void_p]
+    cf.CFRelease.argtypes = [ctypes.c_void_p]
+    raw = str(path).encode()
+    url = cf.CFURLCreateFromFileSystemRepresentation(None, raw, len(raw), False)
+    try:
+        return bool(ct.CTFontManagerRegisterFontsForURL(url, 1, None))
+    finally:
+        cf.CFRelease(url)
 
 
 def window(parent, title=None, fill=WIN, pad=12):

@@ -108,7 +108,7 @@ class Studio:
   self.device=tk.StringVar(value='LOOKING FOR X68')
   self.subtitle=tk.StringVar(value='');tk.Label(head,textvariable=self.subtitle,font=BODY,bg=BG,fg=MUTED).pack(anchor='w',pady=(8,0))
   outer,msg=window(shell,pad=10);outer.pack(side='bottom',fill='x',pady=(10,0))
-  self.status=tk.StringVar(value='Connect the X68 in wired mode.');self.typed=tk.StringVar(value='');self.typing=0
+  self.status=tk.StringVar(value='Connect the X68 over USB or its 2.4 GHz receiver.');self.typed=tk.StringVar(value='');self.typing=0
   self.connect_button=PixelButton(msg,'Connect USB',self.refresh);self.connect_button.pack(side='right')
   tk.Label(msg,textvariable=self.typed,font=BODY,bg=BG,fg=INK,anchor='w',justify='left',wraplength=760).pack(side='left',fill='x',expand=True)
   self.status.trace_add('write',lambda *args:self.type_status())
@@ -193,14 +193,14 @@ class Studio:
   body=ttk.Frame(p);body.pack(fill='x',pady=(10,0))
   fx=pixel.panel(body,'EFFECT');fx.pack(side='left',fill='y')
   pixel.Choice(fx,self.effect,EFFECTS,columns=4,width=14).pack(anchor='w')
-  opts=pixel.panel(body,'LIGHT');opts.pack(side='left',fill='both',expand=True,padx=(12,0))
+  opts=pixel.panel(body,'LIGHT',pad=6);opts.pack(side='left',fill='both',expand=True,padx=(12,0))
   def line(title):
    row=tk.Frame(opts,bg=PANEL);row.pack(fill='x',pady=3);tk.Label(row,text=title,font=LABEL,bg=PANEL,fg=MUTED,width=10,anchor='w').pack(side='left');return row
   pixel.Meter(line('BRIGHTNESS'),self.brightness).pack(side='left');pixel.Meter(line('SPEED'),self.speed).pack(side='left')
   self.swatches=tk.Canvas(line('COLOUR'),width=8*26,height=26,bg=PANEL,highlightthickness=0,cursor='hand2');self.swatches.pack(side='left')
   self.swatches.bind('<Button-1>',self.pick_swatch);self.color.trace_add('write',lambda *args:self.draw_swatches());self.draw_swatches()
-  pixel.Choice(line('MODE'),self.rainbow,[('Keep device flag','Keep'),('Single colour','Single'),('Rainbow','Rainbow')],columns=3).pack(side='left')
-  pixel.Choice(line('PREVIEW'),self.preview_mode,[('Effect preview','Effect'),('Per-key design draft','Key draft')],columns=2).pack(side='left')
+  pixel.Choice(line('MODE'),self.rainbow,[('Keep device flag','Keep'),('Single colour','Single'),('Rainbow','Rainbow')],columns=2).pack(side='left')
+  pixel.Choice(line('PREVIEW'),self.preview_mode,[('Effect preview','Effect'),('Per-key design draft','Key draft')],columns=1).pack(side='left')
   actions=ttk.Frame(p);actions.pack(fill='x',pady=(12,0))
   self.lighting_send=self.button(actions,'Send to keyboard',self.apply_lighting,True);self.button(actions,'Read from keyboard',self.read_settings);self.button(actions,'Export draft',self.export_draft)
   self.preview_mode.trace_add('write',lambda *args:self.lighting_send.configure(state='normal' if self.preview_mode.get()=='Effect preview' else 'disabled'))
@@ -457,7 +457,7 @@ class Studio:
   self.needs_battery_read=True
   self.connect_button.configure(text='Connecting...',state='disabled');self.submit('Finding X68',self.client.inventory,self.found)
  def found(self,result):
-  self.inventory=result;self.device.set('[+]  SUBOR X68 / USB');self.usb_mode.set('USB / wired mode');self.connect_button.configure(text='Refresh USB',state='normal');self.status.set('Connected. Device protocol verified.')
+  self.inventory=result;usb=result.get('transport')!='wireless';self.device.set('[+]  SUBOR X68 / '+('USB' if usb else '2.4 GHz'));self.usb_mode.set('USB / wired mode' if usb else '2.4 GHz receiver (firmware and LCD media need USB)');self.connect_button.configure(text='Refresh',state='normal');self.status.set('Connected. Device protocol verified.')
   if self.monitor:self.monitor.close()
   try:
    if sys.platform=='win32':

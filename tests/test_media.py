@@ -13,7 +13,7 @@ class MemoryMedia:
   self.client=SimpleNamespace(last_query=-float('inf'),query_version=lambda:{'reported_crc':crc})
   self.data=bytearray(range(64));self.data[33]=4;self.before=bytes(self.data);self.writes=[];self.packets=[];self.short=short
  @contextmanager
- def _device(self):yield self
+ def _device(self, wireless=True):yield self
  @contextmanager
  def _transaction(self,device):yield
  def _read(self,device,command,length):return bytes(self.data)

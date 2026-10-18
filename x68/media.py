@@ -103,7 +103,7 @@ def upload_media(settings,prepared,project_dir,progress=None):
     prepared.frames[0].save(folder/'preview.png')
     trace=[];result={'phase':'preflight','conversion':prepared.metadata(),'flash_readback_verified':False,'trace':trace}
     try:
-        with settings._device() as device:
+        with settings._device(wireless=False) as device:
             before=settings._read(device,5,64);result['parameter_backup']=settings._backup('lighting',before)
             # Exit the media player before erasing its bank. This also clears
             # the renderer's cached frame for single-frame replacements.

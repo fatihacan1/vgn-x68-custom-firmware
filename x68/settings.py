@@ -13,12 +13,13 @@ from pathlib import Path
 import struct
 import time
 
-from .protocol import VID, PID, is_target, interface_matches, ProtocolError
+from .protocol import enumerate_targets, interface_matches, is_wireless, collection_reports, ProtocolError
 
 SETTINGS_DESCRIPTOR = bytes.fromhex(
     "06 1c ff 09 92 a1 01 85 04 19 00 29 ff 15 00 26 ff 00 75 08 95 3f 81 00 "
     "19 00 29 ff 15 00 26 ff 00 75 08 95 3f 91 00 c0"
 )
+WIRELESS_SETTINGS_REPORTS = {(4, 'in', 8, 63), (4, 'out', 8, 63)}
 READ_LIMITS = {3: 34, 5: 64, 8: 384, 20: 4096, 26: 6, 25:48}
 WRITE_LIMITS = {6: 64, 9: 384, 21: 4096, 24: 6}
 MODIFIERS = {"CTRL": 1, "SHIFT": 2, "ALT": 4, "WIN": 8,
@@ -262,16 +263,20 @@ class SettingsClient:
         self.trace = []
 
     @contextmanager
-    def _device(self):
+    def _device(self, wireless=True):
+        # Bulk transfers (LCD media) pass wireless=False and stay on the cable.
         with self.client.lock:
-            matches = [d for d in self.client.backend.enumerate(VID, PID) if is_target(d)
-                       and d['usage_page'] == 0xFF1C and d['usage'] == 0x92 and interface_matches(d,1)]
+            matches = [d for d in enumerate_targets(self.client.backend, wireless)
+                       if d['usage_page'] == 0xFF1C and d['usage'] == 0x92 and interface_matches(d,1)]
             if len(matches) != 1:
-                raise ProtocolError("Exactly one X68 settings interface is required.")
+                raise ProtocolError("Exactly one X68 settings interface is required." if wireless or matches
+                                    else "This needs the USB cable in wired mode.")
             device = self.client.backend.device()
             try:
                 device.open_path(matches[0]['path'])
-                if bytes(device.get_report_descriptor()) != SETTINGS_DESCRIPTOR:
+                descriptor = bytes(device.get_report_descriptor())
+                if (collection_reports(descriptor, 0xFF1C, 0x92) != WIRELESS_SETTINGS_REPORTS
+                        if is_wireless(matches[0]) else descriptor != SETTINGS_DESCRIPTOR):
                     raise ProtocolError("The X68 settings interface descriptor did not match; nothing was written.")
                 while device.read(64, 10):
                     # Bounded drain, no continuous unsolicited stream expected.
