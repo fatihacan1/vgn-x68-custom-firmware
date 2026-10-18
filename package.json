@@ -1,0 +1,13 @@
+{
+  "name": "vgn-x68-custom-firmware",
+  "version": "0.6.0",
+  "private": true,
+  "description": "Open-source Windows app for the VGN / SUBOR X68 keyboard: lighting, keymaps, macros, LCD, battery and firmware",
+  "scripts": {
+    "dev": "node tools/dev.mjs",
+    "check": "node tools/dev.mjs --check",
+    "test": "node tools/dev.mjs --test",
+    "build": "powershell -NoProfile -File build-windows.ps1",
+    "build:windows": "powershell -NoProfile -File build-windows.ps1"
+  }
+}

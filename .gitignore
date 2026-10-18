@@ -1,0 +1,15 @@
+.venv/
+.venv-macos/
+__pycache__/
+*.pyc
+*.log
+*.spec
+build/
+dist/
+reports/
+preferences.json
+# VGN firmware is never committed: the app fetches it from VGN and applies firmware-patches/.
+firmware-library/
+firmware-cache/
+*.bin
+*.exe
