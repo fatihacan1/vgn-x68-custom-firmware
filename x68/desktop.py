@@ -94,7 +94,7 @@ class Studio:
    item=tk.Label(menu,text='  '+name.upper(),font=BODY,bg=BG,fg=MUTED,anchor='w',cursor='hand2',pady=5)
    item.pack(fill='x');item.bind('<Button-1>',lambda e,n=name:self.show(n))
    item.bind('<Enter>',lambda e,n=name:self.hover_nav(n));item.bind('<Leave>',lambda e:self.hover_nav(None));self.nav[name]=item
-  self.usb_mode=tk.StringVar(value='USB / not connected')
+  self.usb_mode=tk.StringVar(value='Not connected')
   outer,link=window(side,'LINK',pad=10);outer.pack(fill='x',pady=(10,0))
   tk.Label(link,textvariable=self.usb_mode,font=BODY,bg=BG,fg=MINT,justify='left',wraplength=180).pack(anchor='w')
   # Right column: title + clock, page window, message window.
@@ -109,7 +109,7 @@ class Studio:
   self.subtitle=tk.StringVar(value='');tk.Label(head,textvariable=self.subtitle,font=BODY,bg=BG,fg=MUTED).pack(anchor='w',pady=(8,0))
   outer,msg=window(shell,pad=10);outer.pack(side='bottom',fill='x',pady=(10,0))
   self.status=tk.StringVar(value='Connect the X68 over USB or its 2.4 GHz receiver.');self.typed=tk.StringVar(value='');self.typing=0
-  self.connect_button=PixelButton(msg,'Connect USB',self.refresh);self.connect_button.pack(side='right')
+  self.connect_button=PixelButton(msg,'Connect',self.refresh);self.connect_button.pack(side='right')
   tk.Label(msg,textvariable=self.typed,font=BODY,bg=BG,fg=INK,anchor='w',justify='left',wraplength=760).pack(side='left',fill='x',expand=True)
   self.status.trace_add('write',lambda *args:self.type_status())
   outer,self.holder=window(shell,pad=16);outer.pack(fill='both',expand=True,pady=(10,0))
@@ -382,7 +382,8 @@ class Studio:
  def send_media(self):
   if self.busy:return
   if not self.prepared:return self.status.set('Choose an image or GIF first.')
-  if not self.version or self.version.get('reported_crc') not in LIVE_CLOCK_CRCS:return self.status.set('Install Lavender Quest 0.6.0 in Firmware first.')
+  wireless=bool(self.inventory and self.inventory.get('transport')=='wireless')
+  if not wireless and (not self.version or self.version.get('reported_crc') not in LIVE_CLOCK_CRCS):return self.status.set('Install Lavender Quest 0.6.0 in Firmware first.')
   if not messagebox.askokcancel('Replace custom animation','Upload the converted preview?\n\nThis replaces the keyboard’s entire custom image/GIF bank. The previous animation cannot be read back.\nKeep USB connected until the transfer completes.',parent=self.root):return
   prepared=self.prepared;self.flashing=True;self.monitoring=False;self.stop_test();self.media_progress['value']=0
   self.submit('Uploading screen media',lambda:upload_media(self.settings_client,prepared,WORK,lambda n,total:self.results.put(('media_progress',n,total))),self.media_uploaded)
@@ -391,22 +392,24 @@ class Studio:
   self.media_note.set('Transfer acknowledged; display settings read back. Check the physical screen. Converted data and transfer log saved in reports/media.')
   self.status.set('Custom media selected. Use Lavender desktop to return to the clock scene.')
  def change_screen(self,mode):
-  if not self.version or self.version.get('reported_crc') not in LIVE_CLOCK_CRCS:return self.status.set('Install Lavender Quest 0.6.0 first.')
+  wireless=bool(self.inventory and self.inventory.get('transport')=='wireless')
+  if not wireless and (not self.version or self.version.get('reported_crc') not in LIVE_CLOCK_CRCS):return self.status.set('Install Lavender Quest 0.6.0 first.')
   self.submit('Selecting screen',lambda:set_screen(self.settings_client,mode),lambda result:self.screen_changed())
  def screen_changed(self):self.next_clock_sync=0;self.status.set('Lavender desktop selected.')
  def clock_preference(self):
-  WORK.mkdir(parents=True,exist_ok=True);(WORK/'preferences.json').write_text(json.dumps({'auto_clock':self.auto_clock.get(),'clock_interval_minutes':int(self.clock_interval.get())}),encoding='utf-8');self.next_clock_sync=0
+  WORK.mkdir(parents=True,exist_ok=True);self.save_preferences(auto_clock=self.auto_clock.get(),clock_interval_minutes=int(self.clock_interval.get()));self.next_clock_sync=0
  def startup_preference(self):
   try:
    autostart.configure(self.start_on_login.get());self.status.set('Windows startup enabled.' if self.start_on_login.get() else 'Windows startup disabled.')
   except OSError as error:
    self.start_on_login.set(autostart.enabled());self.status.set('Startup setting failed: '+str(error))
  def sync_clock(self):
-  if not self.version or self.version.get('reported_crc') not in LIVE_CLOCK_CRCS:
+  wireless=bool(self.inventory and self.inventory.get('transport')=='wireless')
+  if not wireless and (not self.version or self.version.get('reported_crc') not in LIVE_CLOCK_CRCS):
    self.next_clock_sync=time.monotonic()+60;return self.clock_note.set('Live sync requires Lavender Quest 0.5.1 or newer. Install it in Firmware.')
   if self.busy:return
   crc=self.version['reported_crc'];self.next_clock_sync=time.monotonic()+60
-  self.submit('Syncing keyboard clock',lambda:self.settings_client.sync_clock_live(crc),self.clock_synced)
+  self.submit('Syncing keyboard clock',lambda:self.settings_client.sync_clock_live(crc,receiver=wireless),self.clock_synced)
  def clock_synced(self,result):
   self.next_clock_sync=time.monotonic()+int(self.clock_interval.get())*60;self.clock_note.set('Synced from computer: '+result['local_time'][:19].replace('T',' ')+'  /  RAM only');self.status.set('Keyboard date and time synchronized.')
 
@@ -470,7 +473,8 @@ class Studio:
   self.settings=result;lighting=result['lighting']
   if lighting:
    self.effect.set(EFFECTS[lighting['mode']-1]);self.brightness.set(lighting['brightness']);self.speed.set(lighting['speed']);self.color.set(lighting['color'])
-   self.rainbow.set('Keep device flag')
+   # Show what the keyboard does now. FF (meaning unverified) lights up multicolour on the device, so it stays 'Keep' but previews as rainbow.
+   self.device_rainbow=lighting['rainbow_raw']!=0;self.rainbow.set({0:'Single colour',1:'Rainbow'}.get(lighting['rainbow_raw'],'Keep device flag'))
   self.editable=[k for k in result['keys'] if k['editable']]
   if not self.physical_indices:
    self.physical_indices={name:self.lookup(name) for row in ROWS for _,name,_ in row}
@@ -478,9 +482,14 @@ class Studio:
   self.status.set('Settings loaded. Nothing is written until you press Send.');self.next_clock_sync=0;self.draw_boards();self.slot_choice.refresh()
   if not self.version:self.read_version()
  def read_version(self):self.submit('Checking installed build',self.client.query_version,self.show_version)
+ def save_preferences(self,**values):
+  try:preferences=json.loads((WORK/'preferences.json').read_text(encoding='utf-8'))
+  except (OSError,ValueError):preferences={}
+  WORK.mkdir(parents=True,exist_ok=True);(WORK/'preferences.json').write_text(json.dumps({**preferences,**values}),encoding='utf-8')
  def show_version(self,result):
   self.version=result;self.next_clock_sync=0;crc=result['reported_crc'];known={'14961BE6':'Original V0113','EF331DCE':'Lavender Quest 0.4.0','4CB077DE':'Lavender Quest 0.4.1','FC2EBCFE':'Lavender Quest 0.4.2','3C866A9B':'Lavender Quest 0.5.0',LIVE_CLOCK_CRC:'Lavender Quest 0.5.1',BATTERY_DIAGNOSTIC_CRC:'Lavender Quest 0.6.0'}
-  self.installed.set('Installed: '+known.get(crc,'Unrecognized build')+'  /  CRC '+crc)
+  if self.inventory and self.inventory.get('transport')=='wireless':known={}
+  self.installed.set('Installed: '+known.get(crc,'Unrecognized build')+'  /  CRC '+crc if known else 'Installed build: not reported over 2.4 GHz  /  receiver CRC '+crc)
   self.status.set('Version read complete / '+known.get(crc,'Unknown build')+' / CRC '+crc)
  def choose_color(self):
   value=colorchooser.askcolor(color=self.color.get(),parent=self.root)[1]
@@ -518,10 +527,13 @@ class Studio:
     boxes.append((x,y,x+w,y+40,key))
    if kind in ('rgb','map'):self.keyboxes[kind]=boxes
  def effect_color(self,mode,row,x,phase):
-  c=self.color.get()
+  c=self.color.get();rainbow=self.rainbow.get()=='Rainbow' or (self.rainbow.get()=='Keep device flag' and getattr(self,'device_rainbow',False))
   try:base=tuple(int(c[i:i+2],16)/255 for i in (1,3,5))
   except ValueError:base=(.71,.61,.80)
   if mode=='Off':return '#3b304b'
+  if rainbow and mode in ('Solid','Breathing'):
+   hue=(x+row*.05+phase*.06)%1;level=1 if mode=='Solid' else .3+.7*(math.sin(phase)+1)/2
+   return '#'+''.join(f'{int(v*level*255):02x}' for v in colorsys.hsv_to_rgb(hue,.4,.9))
   if mode=='Solid':return '#'+''.join(f'{int(v*255):02x}' for v in base)
   if mode=='Breathing':return '#'+''.join(f'{int(v*(.3+.7*(math.sin(phase)+1)/2)*255):02x}' for v in base)
   hue=(x+row*.05+phase*.06)%1;rgb=colorsys.hsv_to_rgb(hue,.4,.9)
@@ -683,8 +695,8 @@ class Studio:
    _,name,result,error,done=item;self.busy=False
    self.logs.append({'time':datetime.now().astimezone().isoformat(),'operation':name,'error':error})
    if error:
-    self.status.set('Operation failed. Check the wired connection; details are in Advanced.')
-    if name=='Finding X68':self.inventory=None;self.device.set('[ ]  X68 NOT CONNECTED');self.usb_mode.set('USB / not connected');self.connect_button.configure(text='Connect USB',state='normal');self.next_reconnect=time.monotonic()+5
+    self.status.set(error if name=='Finding X68' and 'Input Monitoring' in error else 'Operation failed. Check the connection; details are in Advanced.')
+    if name=='Finding X68':self.inventory=None;self.device.set('[ ]  X68 NOT CONNECTED');self.usb_mode.set('Not connected');self.connect_button.configure(text='Connect',state='normal');self.next_reconnect=time.monotonic()+5
     if name=='Reading battery':self.history.record(error=error);self.next_battery=time.monotonic()+5
     if name=='Syncing keyboard clock':self.next_clock_sync=time.monotonic()+60;self.clock_note.set('Sync failed; reconnecting to verify the device.');self.inventory=None;self.version=None;self.next_reconnect=time.monotonic()+5
     if self.flashing:self.flashing=False;self.install_button.configure(state='normal');self.firmware_note.set('Update stopped. Check Advanced logs before retrying; no automatic retry was sent.');self.media_note.set('Transfer stopped. Check Advanced logs. No automatic retry was sent.')

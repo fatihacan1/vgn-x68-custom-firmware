@@ -384,10 +384,15 @@ class SettingsClient:
                     'backup':backup,'changed_offsets':changed,
                     'rtc_running_requires_physical_confirmation':True}
 
-    def sync_clock_live(self, firmware_crc, moment=None):
-        """Custom 0.5.1 command 18, RAM only. Never send this to stock firmware."""
+    def sync_clock_live(self, firmware_crc, moment=None, receiver=False):
+        """Custom 0.5.1 command 18, RAM only.
+
+        Over the 2.4 GHz receiver the version reply is the receiver's CRC, so the keyboard's
+        build cannot be checked. Stock V0113 routes command 18 to its unsupported handler,
+        so sending it there unverified changes nothing.
+        """
         from .firmware import LIVE_CLOCK_CRCS
-        if firmware_crc not in LIVE_CLOCK_CRCS:
+        if not receiver and firmware_crc not in LIVE_CLOCK_CRCS:
             raise ProtocolError('Live clock sync requires the reviewed Lavender Quest 0.5.1 firmware.')
         moment=moment or datetime.now().astimezone()
         fields=bytes((n//10)*16+n%10 for n in [moment.second,moment.minute,moment.hour,moment.isoweekday(),moment.day,moment.month])

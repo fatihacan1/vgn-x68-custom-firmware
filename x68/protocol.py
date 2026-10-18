@@ -118,8 +118,13 @@ class X68Client:
             if sys.platform == 'darwin':
                 # hidapi seizes devices by default; the receiver's vendor collection
                 # shares interface 1 with the system keyboard, so seizing it fails.
-                import ctypes
+                import ctypes, ctypes.util
                 ctypes.CDLL(hid.__file__).hid_darwin_set_open_exclusive(0)
+                # It is also a keyboard interface, so macOS requires Input Monitoring.
+                # Asking registers the app in System Settings and shows the prompt once.
+                iokit = ctypes.cdll.LoadLibrary(ctypes.util.find_library('IOKit'))
+                if iokit.IOHIDCheckAccess(1) != 0:
+                    iokit.IOHIDRequestAccess(1)
         self.backend = backend
         self.lock = threading.Lock()
         self.last_query = -float("inf")
@@ -157,7 +162,13 @@ class X68Client:
             wireless = is_wireless(vendor)
             handle = self.backend.device()
             try:
-                handle.open_path(vendor["path"])
+                try:
+                    handle.open_path(vendor["path"])
+                except OSError as error:
+                    if wireless and sys.platform == 'darwin':
+                        raise ProtocolError("macOS blocked the 2.4 GHz receiver. Allow this app in System Settings > "
+                                            "Privacy & Security > Input Monitoring, then reopen it.") from error
+                    raise
                 descriptor = self._verify_descriptor(handle, wireless)
             finally:
                 handle.close()
