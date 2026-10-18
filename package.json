@@ -8,6 +8,7 @@
     "check": "node tools/dev.mjs --check",
     "test": "node tools/dev.mjs --test",
     "build": "powershell -NoProfile -File build-windows.ps1",
-    "build:windows": "powershell -NoProfile -File build-windows.ps1"
+    "build:windows": "powershell -NoProfile -File build-windows.ps1",
+    "build:macos": "sh build-macos.sh"
   }
 }
