@@ -39,6 +39,7 @@ for row in ROWS:
         ext = extra[0] if extra else False
         if scan is not None:
             KEY_NAMES[key_id(scan, ext)] = label
+KEY_NAMES.update({key_id(scan): f"F{i}" for i, scan in enumerate([*range(0x3B, 0x45), 0x57, 0x58, *range(0x64, 0x6F), 0x76], 1)})
 KEY_NAMES.update({"38": "Sol Alt", "E0:38": "Sağ Alt", "E0:5B": "Sol Win", "1D": "Sol Ctrl", "E0:1D": "Sağ Ctrl"})
 
 
