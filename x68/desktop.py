@@ -6,7 +6,7 @@ import colorsys, json, math, os, queue, sys, time, subprocess, traceback
 import tkinter as tk
 from tkinter import ttk, filedialog, colorchooser, messagebox
 from .protocol import X68Client
-from .settings import SettingsClient, HID_KEYS, MODIFIERS, PHYSICAL_KEY_INDICES, compile_macro, macro_text
+from .settings import SettingsClient, HID_KEYS, MODIFIERS, MEDIA_KEYS, PHYSICAL_KEY_INDICES, compile_macro, macro_text
 from .battery import query_battery, BatteryHistory
 from .battery_health import ASSUMPTION, ChargeTrend, estimate
 from .firmware import LIVE_CLOCK_CRC, LIVE_CLOCK_CRCS, BATTERY_DIAGNOSTIC_CRC
@@ -224,14 +224,21 @@ class Studio:
   body=ttk.Frame(p);body.pack(fill='both',expand=True,pady=(10,0))
   key=pixel.panel(body,'SELECTED KEY');key.pack(side='left',fill='both',expand=True)
   self.selection=tk.StringVar(value='Click a key on the board.');tk.Label(key,textvariable=self.selection,font=HEAD,bg=PANEL,fg=INK,wraplength=420,justify='left').pack(anchor='w')
-  f=tk.Frame(key,bg=PANEL);f.pack(anchor='w',pady=(16,0));tk.Label(f,text='NEW ACTION',font=LABEL,bg=PANEL,fg=MUTED).pack(side='left',padx=(0,10))
-  self.target=tk.StringVar(value='CTRL');ttk.Combobox(f,textvariable=self.target,values=list(MODIFIERS)+list(HID_KEYS),state='readonly',width=14).pack(side='left',padx=(0,10));self.button(f,'Add to draft',self.stage_mapping)
+  f=tk.Frame(key,bg=PANEL);f.pack(anchor='w',pady=(16,0));tk.Label(f,text='ACTION TYPE',font=LABEL,bg=PANEL,fg=MUTED).pack(side='left',padx=(0,10))
+  self.action_type=tk.StringVar(value='Keyboard');self.action_type_combo=ttk.Combobox(f,textvariable=self.action_type,values=['Keyboard','Media'],state='readonly',width=12);self.action_type_combo.pack(side='left');self.action_type_combo.bind('<<ComboboxSelected>>',self.change_action_type)
+  f=tk.Frame(key,bg=PANEL);f.pack(anchor='w',pady=(10,0));tk.Label(f,text='NEW ACTION',font=LABEL,bg=PANEL,fg=MUTED).pack(side='left',padx=(0,10))
+  self.target=tk.StringVar(value='CTRL');self.target_combo=ttk.Combobox(f,textvariable=self.target,values=list(MODIFIERS)+list(HID_KEYS),state='readonly',width=16);self.target_combo.pack(side='left',padx=(0,10));self.button(f,'Add to draft',self.stage_mapping)
   tk.Label(key,text='Fn and reserved firmware functions stay protected.',font=BODY,bg=PANEL,fg=MUTED).pack(anchor='w',side='bottom')
   draft=pixel.panel(body,'DRAFT');draft.pack(side='left',fill='both',expand=True,padx=(12,0))
   self.mapping_note=tk.StringVar(value='Empty. Picking keys never writes the keyboard.')
   tk.Label(draft,textvariable=self.mapping_note,font=BODY,bg=PANEL,fg=MINT,wraplength=400,justify='left',anchor='nw').pack(anchor='w',fill='x')
   f=tk.Frame(draft,bg=PANEL);f.pack(anchor='w',side='bottom');self.mapping_send=self.button(f,'Send draft (0)',self.remap,True);self.mapping_send.configure(state='disabled');self.button(f,'Discard',self.clear_mapping)
   self.source=tk.StringVar()
+
+ def change_action_type(self,event=None):
+  values=list(MEDIA_KEYS) if self.action_type.get()=='Media' else list(MODIFIERS)+list(HID_KEYS)
+  self.target_combo.configure(values=values)
+  if self.target.get() not in values:self.target.set(values[0])
 
  def _macros(self):
   p=self.pages['Macros'];left=pixel.panel(p,'SLOT');left.pack(side='left',fill='y')
@@ -511,6 +518,9 @@ class Studio:
   name=entry['name']
   if name==key:return label
   if entry['flag'] in (112,113):return f"M{(entry['code']>>8)+1}"
+  if name in MEDIA_KEYS:
+   return {'Play / Pause':'Play','Previous Track':'Prev','Next Track':'Next',
+           'Volume Up':'Vol+','Volume Down':'Vol−','Mute':'Mute'}[name]
   return {'BACKSPACE':'Back','CAPSLOCK':'Caps','PAGEDOWN':'PgDn','PAGEUP':'PgUp',
           'DELETE':'Del','INSERT':'Ins','PRINTSCREEN':'PrtSc','SCROLLLOCK':'ScrLk',
           'RIGHT':'→','LEFT':'←','DOWN':'↓','UP':'↑'}.get(name,name.title() if len(name)>3 and not name.startswith('HID ') else name)
@@ -574,7 +584,9 @@ class Studio:
    self.selected=None;self.selection.set('Select an editable source key.');return
   key=next((name for name,index in PHYSICAL_KEY_INDICES.items() if index==self.selected),f'Matrix cell {self.selected}')
   self.selection.set(f"{key}\nnow sends {entry['name']}")
-  if entry['name'] in HID_KEYS or entry['name'] in MODIFIERS:self.target.set(entry['name'])
+  if entry['name'] in HID_KEYS or entry['name'] in MODIFIERS or entry['name'] in MEDIA_KEYS:
+   self.action_type.set('Media' if entry['name'] in MEDIA_KEYS else 'Keyboard')
+   self.change_action_type();self.target.set(entry['name'])
  def select_matrix(self,event=None):
   i=self.source_combo.current()
   if i>=0:self.selected=self.editable[i]['index'];self.update_selection();self.draw_boards()

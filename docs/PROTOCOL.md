@@ -75,6 +75,13 @@ Tuş hücresi üç bayt: `[flags, code_hi, code_lo]`; normal tuş flag 20 hex,
 modifier yüksek baytta bitmask. Fn flag A0 ve kod 0100; korunur.
 Tek oynatmalı makro ataması `[71 hex, macro_index, 01]`.
 
+Medya ataması `[30 hex, consumer_usage, 00]`: oynat/duraklat CD,
+önceki parça B6, sonraki parça B5, sessiz E2, ses azalt EA, ses artır E9.
+Bu altı üçlü stock V0113 Fn tablosunda payload `1CD04..1CD1B` aralığında
+hücre numarasıyla birlikte bulunur. Kullanımlar USB-IF Consumer sayfasındandır:
+https://www.usb.org/sites/default/files/hut1_3_0.pdf
+Yalnız bu bilinen medya atamaları yeniden düzenlemeye açılır; diğer fonksiyonlar korunur.
+
 Makro bankası: AA55, toplam boyut LE16, yuva sayısı LE16, 10 bayt korunan metadata,
 yuva başına LE16 ofsetler, ardından makro blokları. Bir blokta olay sayısı LE16,
 2 bayt metadata, olaylar `[delayLE16, action, key]`. Yeni blok metadata'sı 35 00 hex.

@@ -21,3 +21,12 @@ class MappingBatchTests(unittest.TestCase):
   c=MemoryMapping()
   with self.assertRaises(ProtocolError):c.remap_batch({16:'C',0:'D'})
   self.assertEqual(c.writes,[])
+ def test_saved_media_action_can_be_reassigned_and_other_cells_are_preserved(self):
+  c=MemoryMapping();before=bytes(c.mapping)
+  c.remap_batch({16:'Volume Up'})
+  self.assertEqual(c.mapping[48:51],bytes.fromhex('30 e9 00'))
+  c.remap_batch({16:'Play / Pause'})
+  self.assertEqual(c.mapping[48:51],bytes.fromhex('30 cd 00'))
+  c.remap_batch({16:'F17'})
+  self.assertEqual(c.mapping[48:51],encode_key('F17'))
+  self.assertEqual(c.mapping[:48],before[:48]);self.assertEqual(c.mapping[51:],before[51:])

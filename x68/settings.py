@@ -39,6 +39,12 @@ HID_KEYS.update({f"F{i}": i+57 for i in range(1, 13)})
 HID_KEYS.update({f"F{i}": i+91 for i in range(13, 25)})
 NAMES = {v: k for k, v in HID_KEYS.items()}
 MOD_NAMES = {v << 8: k for k, v in MODIFIERS.items()}
+# Consumer-page usages from the stock V0113 Fn-action table at 0x1CD04.
+# Unlike keyboard usages, these occupy the second byte: [0x30, usage, 0].
+MEDIA_KEYS = {'Play / Pause': 0xCD, 'Previous Track': 0xB6,
+              'Next Track': 0xB5, 'Mute': 0xE2,
+              'Volume Down': 0xEA, 'Volume Up': 0xE9}
+MEDIA_NAMES = {usage: name for name, usage in MEDIA_KEYS.items()}
 MODES = [(1, "Wave"), (2, "Colour cloud"), (3, "Vortex"), (4, "Spectrum"), (5, "Breathing"), (6, "Solid"), (7, "Reactive"), (8, "Ripple"), (9, "Trail"), (10, "Stars"), (11, "Flowers"), (12, "Scroll"), (13, "Wings"), (14, "Build up"), (15, "Rain"), (16, "Scan"), (17, "Spread"), (18, "Fast wave"), (19, "Custom table"), (20, "Off")]
 
 # Physical cells, independent of their current actions. Verified against the
@@ -131,6 +137,8 @@ def keymap_entries(data: bytes) -> list[dict]:
         code = high*256 + low
         if flag == 32 and code:
             name = MOD_NAMES.get(code, NAMES.get(code, f"HID {code:04X}"))
+        elif flag == 48 and low == 0 and high in MEDIA_NAMES:
+            name = MEDIA_NAMES[high]
         elif flag in (112, 113):
             name = f"Makro {high+1}"
         elif flag == 160 and high == 1 and low == 0:
@@ -140,7 +148,9 @@ def keymap_entries(data: bytes) -> list[dict]:
         else:
             name = f"Function {flag:02X}/{code:04X}"
         entries.append({"index": index, "flag": flag, "code": code, "name": name,
-                        "editable": 16 <= index < 96 and flag in (32, 112, 113) and (bool(code) or flag != 32)})
+                        "editable": 16 <= index < 96 and (
+                            (flag in (32, 112, 113) and (bool(code) or flag != 32))
+                            or (flag == 48 and low == 0 and high in MEDIA_NAMES))})
     return entries
 
 
@@ -152,6 +162,9 @@ def encode_key(name: str) -> bytes:
         return bytes([32, MODIFIERS[name], 0])
     if name in HID_KEYS:
         return bytes([32, 0, HID_KEYS[name]])
+    for label, usage in MEDIA_KEYS.items():
+        if name == label.upper():
+            return bytes([48, usage, 0])
     raise ProtocolError("Unsupported target key.")
 
 

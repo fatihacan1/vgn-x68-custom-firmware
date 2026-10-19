@@ -3,7 +3,7 @@ import unittest
 
 from x68.protocol import ProtocolError
 from x68.settings import (settings_packet, encode_lighting, compile_macro, parse_macro_bank,
-                          replace_macro, macro_text, keymap_entries, HID_KEYS)
+                          replace_macro, macro_text, keymap_entries, HID_KEYS, encode_key)
 
 
 class SettingsTests(unittest.TestCase):
@@ -91,6 +91,24 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(entries[90]['name'], 'Fn')
         self.assertTrue(entries[81]['editable'])
         self.assertEqual(entries[81]['name'], 'WIN')
+
+    def test_media_actions_use_consumer_encoding_and_remain_editable(self):
+        for name, expected in [('Play / Pause', '30 cd 00'), ('Previous Track', '30 b6 00'),
+                               ('Next Track', '30 b5 00'), ('Mute', '30 e2 00'),
+                               ('Volume Down', '30 ea 00'), ('Volume Up', '30 e9 00')]:
+            with self.subTest(name=name):
+                encoded=encode_key(name.lower())
+                self.assertEqual(encoded,bytes.fromhex(expected))
+                mapping=bytearray(384);mapping[56*3:57*3]=encoded
+                entry=keymap_entries(bytes(mapping))[56]
+                self.assertEqual(entry['name'],name);self.assertTrue(entry['editable'])
+                mapping[:3]=encoded
+                self.assertFalse(keymap_entries(bytes(mapping))[0]['editable'])
+
+    def test_unknown_consumer_actions_and_invalid_formats_stay_protected(self):
+        for encoded in (b'\x30\x00\x00',b'\x30\xcd\x01',b'\x30\xff\x00'):
+            mapping=bytearray(384);mapping[56*3:57*3]=encoded
+            self.assertFalse(keymap_entries(bytes(mapping))[56]['editable'])
 
 
 if __name__ == '__main__':

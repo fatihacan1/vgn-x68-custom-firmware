@@ -116,6 +116,11 @@ owner observations and unresolved questions. No private device paths are needed.
   the left, Page Up (62) above Page Down (63) on the right. Legends show
   their saved actions, e.g. Print Screen and F17 on the owner's keyboard.
   Fn and reserved cells remain protected. Macro events must balance DOWN/UP.
+- Keymap supports six media actions through `[30 hex, consumer_usage, 00]`:
+  play/pause CD, previous B6, next B5, mute E2, volume down EA, volume up E9.
+  Verified in the stock V0113 Fn table at payload 1CD04..1CD1B. Known media
+  assignments remain editable after reload; unknown function formats stay protected.
+  Media actions are direct key assignments, not macro DSL commands.
 - Per-key colour drafts are local only. Device per-key RGB writes are NOT
   verified; a preview changing colour is not proof that an LED was programmed.
 
