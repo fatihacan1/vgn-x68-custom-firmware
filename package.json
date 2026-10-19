@@ -1,6 +1,6 @@
 {
   "name": "vgn-x68-custom-firmware",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "private": true,
   "description": "Open-source Windows app for the VGN / SUBOR X68 keyboard: lighting, keymaps, macros, LCD, battery and firmware",
   "scripts": {

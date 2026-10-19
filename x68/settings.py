@@ -43,7 +43,7 @@ MODES = [(1, "Wave"), (2, "Colour cloud"), (3, "Vortex"), (4, "Spectrum"), (5, "
 
 # Physical cells, independent of their current actions. Verified against the
 # stock V0113 default table at payload offset 0x397B0 and device readbacks.
-# ISO/JIS-only cells are omitted. END has no verified cell on this layout.
+# ISO/JIS-only cells are omitted.
 PHYSICAL_KEY_INDICES = {
     **{name: 16+i for i, name in enumerate(
         ['ESC', *'1234567890', '-', '=', 'BACKSPACE'])},
@@ -51,7 +51,7 @@ PHYSICAL_KEY_INDICES = {
         ['TAB', *'QWERTYUIOP', '[', ']', '\\', 'DELETE'])},
     **{name: 48+i for i, name in enumerate(
         ['CAPSLOCK', *'ASDFGHJKL', ';', "'"])},
-    'ENTER': 61, 'PAGEUP': 62, 'PAGEDOWN': 63, 'SHIFT': 64,
+    'INSERT': 30, 'ENTER': 61, 'PAGEUP': 62, 'PAGEDOWN': 63, 'SHIFT': 64,
     **{name: 66+i for i, name in enumerate([*'ZXCVBNM', ',', '.', '/'])},
     'RSHIFT': 77, 'UP': 78, 'CTRL': 80, 'WIN': 81, 'ALT': 82,
     'SPACE': 85, 'RALT': 89, 'FN': 90, 'RCTRL': 92,

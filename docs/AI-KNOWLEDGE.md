@@ -112,7 +112,9 @@ owner observations and unresolved questions. No private device paths are needed.
   table at payload offset 397B0, checked against device readbacks. Never infer
   physical identity from the current action: remaps and macros replace it.
   Keymap legends show current device actions; selecting a macro loads its slot.
-  END has no verified cell on this schematic and remains unavailable.
+  The navigation cluster is 2x2: Insert (cell 30) above Delete (46) on
+  the left, Page Up (62) above Page Down (63) on the right. Legends show
+  their saved actions, e.g. Print Screen and F17 on the owner's keyboard.
   Fn and reserved cells remain protected. Macro events must balance DOWN/UP.
 - Per-key colour drafts are local only. Device per-key RGB writes are NOT
   verified; a preview changing colour is not proof that an LED was programmed.

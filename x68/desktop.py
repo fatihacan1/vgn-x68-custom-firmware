@@ -27,20 +27,21 @@ BUILDS=list(firmware_source.BUILDS)
 CACHE=WORK/'firmware-cache'
 EFFECTS=['Wave','Colour cloud','Vortex','Spectrum','Breathing','Solid','Reactive','Ripple','Trail','Stars','Flowers','Scroll','Wings','Build up','Rain','Scan','Spread','Fast wave','Custom table','Off']
 ROWS=[
- [('Esc','ESC',1),*[(str(n),str(n),1) for n in range(1,10)],('0','0',1),('-','-',1),('=','=',1),('Back','BACKSPACE',2),('Del','DELETE',1)],
- [('Tab','TAB',1.5),*[(c,c,1) for c in 'QWERTYUIOP'],('[','[',1),(']',']',1),('\\','\\',1.5),('PgUp','PAGEUP',1)],
- [('Caps','CAPSLOCK',1.75),*[(c,c,1) for c in 'ASDFGHJKL'],(';',';',1),("'","'",1),('Enter','ENTER',2.25),('PgDn','PAGEDOWN',1)],
- [('Shift','SHIFT',2.25),*[(c,c,1) for c in 'ZXCVBNM'],(',',',',1),('.','.',1),('/','/',1),('Shift','RSHIFT',1.75),('Up','UP',1),('End','END',1)],
+ [('Esc','ESC',1),*[(str(n),str(n),1) for n in range(1,10)],('0','0',1),('-','-',1),('=','=',1),('Back','BACKSPACE',2)],
+ [('Tab','TAB',1.5),*[(c,c,1) for c in 'QWERTYUIOP'],('[','[',1),(']',']',1),('\\','\\',1.5)],
+ [('Caps','CAPSLOCK',1.75),*[(c,c,1) for c in 'ASDFGHJKL'],(';',';',1),("'","'",1),('Enter','ENTER',2.25)],
+ [('Shift','SHIFT',2.25),*[(c,c,1) for c in 'ZXCVBNM'],(',',',',1),('.','.',1),('/','/',1),('Shift','RSHIFT',1.75),('Up','UP',1)],
  [('Ctrl','CTRL',1.25),('Win','WIN',1.25),('Alt','ALT',1.25),('Space','SPACE',6.25),('Alt','RALT',1.25),('Fn','FN',1.25),('Left','LEFT',1),('Down','DOWN',1),('Right','RIGHT',1)],
 ]
-# Main typing block, separate navigation column and spaced inverted-T arrows.
-MAIN_ROWS=[[(label,key,size) for label,key,size in row if key not in ('DELETE','PAGEUP','PAGEDOWN','END','UP','LEFT','DOWN','RIGHT')] for row in ROWS]
+# Main typing block, 2x2 navigation cluster and spaced inverted-T arrows.
+MAIN_ROWS=[[(label,key,size) for label,key,size in row if key not in ('UP','LEFT','DOWN','RIGHT')] for row in ROWS]
 LAYOUT=[]
 for r,row in enumerate(MAIN_ROWS):
  x=0
  for label,key,size in row:
   LAYOUT.append((label,key,x,r,size));x+=size
-LAYOUT += [(label,key,16.75,r,1) for r,(label,key) in enumerate([('Del','DELETE'),('PgUp','PAGEUP'),('PgDn','PAGEDOWN'),('End','END')])]
+LAYOUT += [('Ins','INSERT',15.75,0,1),('Del','DELETE',15.75,1,1),
+           ('PgUp','PAGEUP',16.75,0,1),('PgDn','PAGEDOWN',16.75,1,1)]
 LAYOUT += [('↑','UP',14.5,3,1),('←','LEFT',13.5,4,1),('↓','DOWN',14.5,4,1),('→','RIGHT',15.5,4,1)]
 
 class Studio:
