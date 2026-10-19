@@ -108,7 +108,11 @@ owner observations and unresolved questions. No private device paths are needed.
 - Known RGB parameter bytes: effect 1, brightness 2, reversed speed 3,
   rainbow flag 5, RGB 6..8. Preserve unrelated bytes. Rainbow FF has unknown
   meaning; preserve it unless the user explicitly selects another value.
-- The keyboard diagram is schematic. Real matrix cells come from the device.
+- Physical key identities use fixed matrix cells from the stock V0113 default
+  table at payload offset 397B0, checked against device readbacks. Never infer
+  physical identity from the current action: remaps and macros replace it.
+  Keymap legends show current device actions; selecting a macro loads its slot.
+  END has no verified cell on this schematic and remains unavailable.
   Fn and reserved cells remain protected. Macro events must balance DOWN/UP.
 - Per-key colour drafts are local only. Device per-key RGB writes are NOT
   verified; a preview changing colour is not proof that an LED was programmed.

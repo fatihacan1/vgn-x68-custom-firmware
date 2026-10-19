@@ -41,6 +41,23 @@ NAMES = {v: k for k, v in HID_KEYS.items()}
 MOD_NAMES = {v << 8: k for k, v in MODIFIERS.items()}
 MODES = [(1, "Wave"), (2, "Colour cloud"), (3, "Vortex"), (4, "Spectrum"), (5, "Breathing"), (6, "Solid"), (7, "Reactive"), (8, "Ripple"), (9, "Trail"), (10, "Stars"), (11, "Flowers"), (12, "Scroll"), (13, "Wings"), (14, "Build up"), (15, "Rain"), (16, "Scan"), (17, "Spread"), (18, "Fast wave"), (19, "Custom table"), (20, "Off")]
 
+# Physical cells, independent of their current actions. Verified against the
+# stock V0113 default table at payload offset 0x397B0 and device readbacks.
+# ISO/JIS-only cells are omitted. END has no verified cell on this layout.
+PHYSICAL_KEY_INDICES = {
+    **{name: 16+i for i, name in enumerate(
+        ['ESC', *'1234567890', '-', '=', 'BACKSPACE'])},
+    **{name: 32+i for i, name in enumerate(
+        ['TAB', *'QWERTYUIOP', '[', ']', '\\', 'DELETE'])},
+    **{name: 48+i for i, name in enumerate(
+        ['CAPSLOCK', *'ASDFGHJKL', ';', "'"])},
+    'ENTER': 61, 'PAGEUP': 62, 'PAGEDOWN': 63, 'SHIFT': 64,
+    **{name: 66+i for i, name in enumerate([*'ZXCVBNM', ',', '.', '/'])},
+    'RSHIFT': 77, 'UP': 78, 'CTRL': 80, 'WIN': 81, 'ALT': 82,
+    'SPACE': 85, 'RALT': 89, 'FN': 90, 'RCTRL': 92,
+    'LEFT': 93, 'DOWN': 94, 'RIGHT': 95,
+}
+
 
 def settings_packet(command: int, offset=0, data=b"", size=None) -> bytes:
     if command in (1, 2):

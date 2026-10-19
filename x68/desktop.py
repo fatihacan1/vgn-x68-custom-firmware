@@ -6,7 +6,7 @@ import colorsys, json, math, os, queue, sys, time, subprocess, traceback
 import tkinter as tk
 from tkinter import ttk, filedialog, colorchooser, messagebox
 from .protocol import X68Client
-from .settings import SettingsClient, HID_KEYS, MODIFIERS, compile_macro, macro_text
+from .settings import SettingsClient, HID_KEYS, MODIFIERS, PHYSICAL_KEY_INDICES, compile_macro, macro_text
 from .battery import query_battery, BatteryHistory
 from .battery_health import ASSUMPTION, ChargeTrend, estimate
 from .firmware import LIVE_CLOCK_CRC, LIVE_CLOCK_CRCS, BATTERY_DIAGNOSTIC_CRC
@@ -48,7 +48,7 @@ class Studio:
   self.root=root;self.smoke=smoke;self.closed=False;self.busy=False;self.flashing=False
   self.client=X68Client();self.settings_client=SettingsClient(self.client,WORK/'reports/backups')
   self.pool=ThreadPoolExecutor(max_workers=1);self.results=queue.Queue();self.keys=queue.Queue()
-  self.inventory=None;self.settings=None;self.version=None;self.logs=[];self.monitor=None;self.physical_indices={}
+  self.inventory=None;self.settings=None;self.version=None;self.logs=[];self.monitor=None
   self.history=BatteryHistory();self.monitoring=False;self.next_battery=0;self.test_until=0;self.pressed=set();self.counts={}
   self.selected=None;self.paint={};self.keyboxes={};self.page_name='Lighting';self.photos=[]
   self.pending_mapping={};self.external_firmware=None;self.operation='';self.operation_started=0;self.needs_battery_read=False
@@ -476,9 +476,8 @@ class Studio:
    # Show what the keyboard does now. FF (meaning unverified) lights up multicolour on the device, so it stays 'Keep' but previews as rainbow.
    self.device_rainbow=lighting['rainbow_raw']!=0;self.rainbow.set({0:'Single colour',1:'Rainbow'}.get(lighting['rainbow_raw'],'Keep device flag'))
   self.editable=[k for k in result['keys'] if k['editable']]
-  if not self.physical_indices:
-   self.physical_indices={name:self.lookup(name) for row in ROWS for _,name,_ in row}
   self.source_combo.configure(values=[f"Cell {k['index']:03d}  /  {k['name']}" for k in self.editable])
+  self.update_selection()
   self.status.set('Settings loaded. Nothing is written until you press Send.');self.next_clock_sync=0;self.draw_boards();self.slot_choice.refresh()
   if not self.version:self.read_version()
  def read_version(self):self.submit('Checking installed build',self.client.query_version,self.show_version)
@@ -501,11 +500,21 @@ class Studio:
   args=(mode,self.brightness.get(),self.speed.get(),rainbow,self.color.get())
   self.submit('Saving lighting',lambda:self.settings_client.set_lighting(*args),lambda value:self.root.after(50,self.read_settings))
  def lookup(self,name):
-  if name in self.physical_indices:return self.physical_indices[name]
   if not self.settings:return None
-  code=(MODIFIERS[name]<<8) if name in MODIFIERS else HID_KEYS.get(name)
-  return next((k['index'] for k in self.settings['keys'] if k['editable'] and k['flag']==32 and k['code']==code),None)
+  index=PHYSICAL_KEY_INDICES.get(name)
+  return next((k['index'] for k in self.settings['keys'] if k['index']==index and k['editable']),None)
+ def mapping_label(self,key,label):
+  index=self.lookup(key)
+  if index is None:return label
+  entry=next(k for k in self.settings['keys'] if k['index']==index)
+  name=entry['name']
+  if name==key:return label
+  if entry['flag'] in (112,113):return f"M{(entry['code']>>8)+1}"
+  return {'BACKSPACE':'Back','CAPSLOCK':'Caps','PAGEDOWN':'PgDn','PAGEUP':'PgUp',
+          'DELETE':'Del','INSERT':'Ins','PRINTSCREEN':'PrtSc','SCROLLLOCK':'ScrLk',
+          'RIGHT':'→','LEFT':'←','DOWN':'↓','UP':'↑'}.get(name,name.title() if len(name)>3 and not name.startswith('HID ') else name)
  def draw_boards(self,phase=0):
+  body_font=tk.font.Font(root=self.root,font=BODY)
   for canvas,kind in [(self.rgb_canvas,'rgb'),(self.map_canvas,'map'),(self.test_canvas,'test')]:
    canvas.delete('all');width=max(canvas.winfo_width(),760);unit=int((width-36)/18.0);boxes=[];bg=canvas.cget('bg')
    right=18+int(17.75*unit)+6;cut=8
@@ -518,12 +527,16 @@ class Studio:
      ink=pixel.DESK if sum(int(fill[i:i+2],16) for i in (1,3,5))>370 else INK
     if kind=='map':
      index=self.lookup(key)
+     label=self.mapping_label(key,label)
      if index in self.pending_mapping:fill='#ff9cc0'
      if index==self.selected and index is not None:fill=MINT;cursor=True
     if kind=='test':
      fill=MINT if key in self.counts else KEY
      if key in self.pressed:fill=PINK;pressed=True
-    pixel.keycap(canvas,x,y,w,40,fill,label,ink,cursor,pressed)
+    legend_font=BODY
+    legend_width=body_font.measure(label)
+    if kind=='map' and legend_width>w-8:legend_font=(BODY[0],-max(6,int(16*(w-8)/legend_width)))
+    pixel.keycap(canvas,x,y,w,40,fill,label,ink,cursor,pressed,font=legend_font)
     boxes.append((x,y,x+w,y+40,key))
    if kind in ('rgb','map'):self.keyboxes[kind]=boxes
  def effect_color(self,mode,row,x,phase):
@@ -546,11 +559,24 @@ class Studio:
  def export_draft(self):self.save_json({'kind':'local_rgb_design_only','device_write_supported':False,'keys':self.paint},'x68-colour-draft.json')
  def select_key(self,event):
   key=self.hit(event,'map');index=self.lookup(key) if key else None
-  if index is None:return self.selection.set('This key is reserved, unassigned or not yet mapped.')
-  self.selected=index;current=next(k['name'] for k in self.settings['keys'] if k['index']==index);self.selection.set(f'{key}\nnow sends {current}');self.draw_boards()
+  self.selected=index
+  if index is None:
+   self.selection.set('This key is reserved, unassigned or not yet mapped.');self.draw_boards();return
+  self.update_selection();self.draw_boards()
+  entry=next(k for k in self.settings['keys'] if k['index']==index)
+  if entry['flag'] in (112,113):
+   self.slot.set((entry['code']>>8)+1);self.slot_choice.refresh();self.load_macro()
+ def update_selection(self):
+  if self.selected is None:return
+  entry=next((k for k in self.settings['keys'] if k['index']==self.selected and k['editable']),None)
+  if entry is None:
+   self.selected=None;self.selection.set('Select an editable source key.');return
+  key=next((name for name,index in PHYSICAL_KEY_INDICES.items() if index==self.selected),f'Matrix cell {self.selected}')
+  self.selection.set(f"{key}\nnow sends {entry['name']}")
+  if entry['name'] in HID_KEYS or entry['name'] in MODIFIERS:self.target.set(entry['name'])
  def select_matrix(self,event=None):
   i=self.source_combo.current()
-  if i>=0:self.selected=self.editable[i]['index'];self.selection.set(f'Matrix cell {self.selected} selected');self.draw_boards()
+  if i>=0:self.selected=self.editable[i]['index'];self.update_selection();self.draw_boards()
  def stage_mapping(self):
   if self.selected is None:return self.status.set('Select an editable source key first.')
   self.pending_mapping[self.selected]=self.target.get();self.mapping_summary();self.status.set('Added to draft. No command was sent.')

@@ -31,7 +31,7 @@ Plug the keyboard in with a USB cable and set its mode switch to wired. The app 
 | Page | What you get |
 |---|---|
 | **Lighting** | 20 effects, brightness and speed, colours. The on-screen board previews the effect before you send it |
-| **Keymap** | Click a key, pick its new action (F13-F24 included, handy as Discord binds), collect changes in a draft, send them in one go. Fn and firmware functions stay protected |
+| **Keymap** | See saved actions after reopening, click a physical key and change its action (F13-F24 included), collect changes in a draft, send them in one go. Selecting a macro key loads its saved slot. Fn and firmware functions stay protected |
 | **Macros** | 16 macro slots stored on the keyboard itself. Write `CTRL+C`, `WAIT 100`, `ENTER` and so on, one per line |
 | **Screen** | Send a PNG, JPG, GIF, WEBP or BMP to the 160×96 LCD, with crop, fit or stretch. GIFs are sampled into 8 frames |
 | **Clock** | Keeps the keyboard's clock in sync with your computer while the app is open |
@@ -64,7 +64,7 @@ While building this we mapped every pin the firmware drives. The X68's charger c
 
 ## Testing
 
-- **93 automated tests**: packet encoding and checksums, settings and keymap decoding, the macro compiler, image conversion, firmware OTA framing, patch rebuilds against the reviewed hashes, battery maths and UI regressions. Run them with `npm test`.
+- **100 automated tests**: packet encoding and checksums, settings and keymap decoding, saved key assignments after reopening, the macro compiler, image conversion, firmware OTA framing, patch rebuilds against the reviewed hashes, battery maths and UI regressions. Run them with `npm test`.
 - **Emulated before flashed.** The custom LCD renderer is compiled for RV32 and run in an emulator against the real firmware image before any build is allowed onto a keyboard.
 - **Checked on real hardware.** Lighting, keymap and macro writes with readback, firmware installs with CRC checks, clock sync and battery reads were all run on a real X68. Custom GIF playback on the physical LCD is still waiting for confirmation.
 
