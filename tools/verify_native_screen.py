@@ -86,7 +86,7 @@ def verify(payload,stock,folder):
     ctypes.c_uint.in_dll(dll,'tick').value=tick;dll.render()
     current=bytes(emu.mem_read(0x819e0,30720))
     assert current==bytes((ctypes.c_ubyte*30720).in_dll(dll,'framebuffer')),'Live status differs from host'
-    assert current[:13*320]!=previous[:13*320],'Header did not update within 250 ms'
+    assert current[:19*320]!=previous[:19*320],'Header did not update within 250 ms'
   results.append({'case':case,'passed':True,'writes':len(writes),'hardware_calls':calls})
  # The new command is a register-preserving branch inside the stock dispatcher.
  bridge=int.from_bytes(payload[0x1e78c:0x1e790],'little')

@@ -39,16 +39,20 @@ def label(draw,text,xy,color):
 
 def desktop():
  im=Image.new('RGB',(160,96),'#211631');d=ImageDraw.Draw(im)
- d.rectangle((0,0,159,12),fill='#68518f')
- d.line((0,0,159,0),fill='#d9c4ff');d.line((0,12,159,12),fill='#100b1e')
- # Mini four-colour desktop icon.
- for x,y,c in [(4,3,'#eda6e8'),(8,3,'#b6f1d6'),(4,7,'#a999ef'),(8,7,'#f4d28e')]:d.rectangle((x,y,x+2,y+2),fill=c)
- label(d,'X68.EXE',(16,3),'#fff1fc')
- for x in (132,141,150):
-  d.rectangle((x,3,x+6,9),fill='#a78bc2',outline='#ddc6f4')
- d.line((152,5,154,7),fill='#332045');d.line((154,5,152,7),fill='#332045')
- d.rectangle((4,17,155,79),fill='#171229',outline='#a88bd1')
- d.line((5,18,154,18),fill='#4e3c70')
+ # Taller title bar with inset status chips and room for real pixel icons.
+ d.rectangle((0,0,159,18),fill='#68518f')
+ d.line((0,0,159,0),fill='#d9c4ff');d.line((0,18,159,18),fill='#100b1e')
+ d.line((1,17,158,17),fill='#a58bc3')
+ label(d,'X68.EXE',(21,6),'#fff1fc')
+ # OS icon, mode chip and lock chip are drawn by the live renderer.
+ d.rectangle((2,2,17,16),fill='#392947',outline='#9f83b9')
+ d.line((3,3,16,3),fill='#c4addf')
+ d.rectangle((74,2,114,16),fill='#392947',outline='#9f83b9')
+ d.line((75,3,113,3),fill='#c4addf')
+ d.rectangle((121,2,157,16),fill='#392947',outline='#9f83b9')
+ d.line((122,3,156,3),fill='#c4addf')
+ d.rectangle((4,21,155,79),fill='#171229',outline='#a88bd1')
+ d.line((5,22,154,22),fill='#4e3c70')
  label(d,'CLOCK',(10,43),'#8d7ba7');label(d,'DAY-MO',(108,35),'#8d7ba7')
  # Pixel skyline and floating platforms, intentionally clear of live text.
  d.polygon([(5,72),(24,53),(35,64),(48,50),(69,72)],fill='#41315e')
@@ -121,7 +125,7 @@ def build(stock,out):
  for sec in (0x42,0x43):
   rtc[2]=sec;dll.render();frames.append(decode(bytes((ctypes.c_ubyte*30720).in_dll(dll,'framebuffer'))).resize((640,384),Image.Resampling.NEAREST))
  frames[0].save(out/'native-preview.gif',save_all=True,append_images=frames[1:],duration=1000,loop=0)
- manifest={'name':'Lavender Quest','version':'0.9.0','built_at':datetime.now().astimezone().isoformat(),'kind':'native_display_renderer','payload_sha256':hashlib.sha256(patched).hexdigest(),'payload_crc':patched[-4:][::-1].hex().upper(),'renderer_sha256':hashlib.sha256(code).hexdigest(),'renderer_bytes':len(code),'hook_hex':redirect().hex(),'clock_bridge':f'{bridge:08X}','battery_bridge':f'{battery_bridge:08X}','battery_diagnostic':'Read-only cached ADC/GPIO/threshold snapshot, command 19 hex, 48 bytes','stock_sha256':hashlib.sha256(stock).hexdigest(),'preview_uses_mock_rtc':True,'charge_logic_changed':False,'custom_image_bank_used_by_default':False,'media_optional':True,'ram_clock_command':'18','battery_badge':'Cached indicator at RAM 80B70, 0..100 only; invalid shows --; no charging status'}
+ manifest={'name':'Lavender Quest','version':'0.9.1','built_at':datetime.now().astimezone().isoformat(),'kind':'native_display_renderer','payload_sha256':hashlib.sha256(patched).hexdigest(),'payload_crc':patched[-4:][::-1].hex().upper(),'renderer_sha256':hashlib.sha256(code).hexdigest(),'renderer_bytes':len(code),'hook_hex':redirect().hex(),'clock_bridge':f'{bridge:08X}','battery_bridge':f'{battery_bridge:08X}','battery_diagnostic':'Read-only cached ADC/GPIO/threshold snapshot, command 19 hex, 48 bytes','stock_sha256':hashlib.sha256(stock).hexdigest(),'preview_uses_mock_rtc':True,'charge_logic_changed':False,'custom_image_bank_used_by_default':False,'media_optional':True,'ram_clock_command':'18','battery_badge':'Cached indicator at RAM 80B70, 0..100 only; invalid shows --; no charging status'}
  (out/'manifest.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
  print(json.dumps(manifest));return target,manifest
 

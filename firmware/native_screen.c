@@ -156,8 +156,34 @@ void render(void) {
  unsigned mac=*(volatile u8 *)0x0008056b;
  unsigned locked=*(volatile u8 *)0x00080565;
 #endif
- label(mac?"MAC":"WIN",64,3,0xb79b);
- label(locked?"L:ON":"L:OFF",88,3,locked?0xf6b1:0xd6ba);
+ /* Stateful platform tile: the existing left logo now follows Fn+A/Fn+S. */
+ if(mac){
+  static const unsigned apple[12]={24,48,0,476,1022,2044,2032,2032,2044,1022,508,216};
+  for(int y=0;y<12;y++)for(int x=0;x<11;x++)
+   if(apple[y]&(1024>>x))pixel(4+x,3+y,0xf7bf);
+ }else{
+  for(int y=0;y<9;y++)for(int x=0;x<9;x++)if(x!=4 && y!=4){
+   unsigned color=y<4?(x<4?0x55ff:0x7f7b):(x<4?0x3598:0x4e9f);
+   pixel(5+x,5+y,color);
+  }
+ }
+ /* Recessed mode chip, with a short coloured rail rather than raw status text. */
+ label(mac?"MAC":"WIN",86,6,mac?0xf7bf:0xb79b);
+ for(int y=6;y<13;y++)pixel(78,y,mac?0xd65f:0x7f7b);
+ /* Distinct lock silhouettes: a closed gold shackle or a visibly swung-open
+  * mint shackle. The keyhole and highlight remain legible at 160 x 96. */
+ unsigned body=locked?0xf6b1:0xb79b,shine=locked?0xff7b:0xdffd;
+ for(int y=9;y<=15;y++)for(int x=132;x<=142;x++)pixel(x,y,body);
+ for(int x=133;x<=141;x++)pixel(x,9,shine);
+ pixel(132,15,0x3929);pixel(142,15,0x3929);
+ int shackle=locked?134:140;
+ for(int x=shackle+1;x<=shackle+5;x++)pixel(x,4,shine);
+ for(int y=5;y<=8;y++){
+  pixel(shackle,y,shine);pixel(shackle+6,y,shine);
+ }
+ pixel(137,11,0x3929);pixel(138,11,0x3929);
+ pixel(137,12,0x3929);pixel(138,12,0x3929);pixel(137,13,0x3929);
+ pixel(125,9,body);pixel(126,9,body);pixel(125,10,body);pixel(126,10,body);
  /* Time from synced parameters + MCU time; never a painted sample clock. */
  pair(hour,10,24,2,0xf7bf); pair(minute,39,24,2,0xf7bf);
  pixel(35,28,0x7f7b);pixel(35,33,0x7f7b);

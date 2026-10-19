@@ -331,3 +331,19 @@ physical readings must be recorded separately; do not infer them from emulation.
   Renderer 4301 bytes; SHA256
   3fe674cd2f58c14de403b647e7cfbe42523e251637108cb9cb3608c02d99cfa7.
   12/24-hour clock, battery diagnostics and media support remain available.
+
+
+## 0.9.1: designed platform and lock badges
+
+- The LCD title bar is now 19 pixels tall with recessed status tiles. The
+  scene frame begins at y=21; clock and animation retain their coordinates.
+- The existing left platform tile shows a cyan four-pane Windows logo in
+  Windows mode, or a hand-drawn white pixel Apple with a leaf and bite in Mac
+  mode. WIN/MAC sits in its own mode chip. X68.EXE remains the window title.
+- L:ON/L:OFF is replaced by a custom padlock: mint with a visibly open shackle
+  when unlocked, or gold with a closed shackle when locked. Shape and colour
+  both communicate status. All icons are drawn by the firmware's C renderer.
+- Native Fn-state addresses and 250 ms live redraw behaviour are unchanged.
+  RV32/host framebuffers match for all four states and live transitions.
+- CRC C21E2168; firmware SHA256 12b115ab89d0bbca4538108100794e22648385984f73ddc465e0580b1aca75bf.
+  Renderer 4338 bytes, SHA256 16cf7f35323a0722c5edbf9d8e105c5e36f9ac702e105f94f357eea726b9c0bb.
