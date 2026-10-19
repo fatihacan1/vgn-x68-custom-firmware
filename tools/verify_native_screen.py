@@ -16,13 +16,17 @@ def verify(payload,stock,folder):
  (ctypes.c_ubyte*30720).in_dll(dll,'background')[:]=payload[0x31664:0x38e64]
  regs=[UC_RISCV_REG_S0,UC_RISCV_REG_S1,UC_RISCV_REG_S2,UC_RISCV_REG_S3,UC_RISCV_REG_S4,UC_RISCV_REG_S5,UC_RISCV_REG_S6,UC_RISCV_REG_S7,UC_RISCV_REG_S8,UC_RISCV_REG_S9,UC_RISCV_REG_S10,UC_RISCV_REG_S11]
  results=[]
- for case,seconds,blocked in [('draw-even',0x42,False),('draw-odd',0x42,False),('next-frame-mode-zero',0x42,False),('pending-transfer',0x42,True),('battery-42',0x42,False),('battery-100',0x42,False),('battery-invalid',0x42,False)]:
+ for case,seconds,blocked in [('draw-even',0x42,False),('draw-odd',0x42,False),('next-frame-mode-zero',0x42,False),('pending-transfer',0x42,True),('battery-42',0x42,False),('battery-100',0x42,False),('battery-invalid',0x42,False),*[(f'12h-{h:02d}',0x59,False) for h in (0,1,11,12,13,23)]]:
   emu=Uc(UC_ARCH_RISCV,UC_MODE_RISCV32);emu.mem_map(0,0x100000);emu.mem_map(0x20000000,0x40000)
   emu.mem_write(0x20000000,payload);emu.mem_write(0x1200,payload[0x12b0:0xa0b4])
   emu.mem_map(0x80140000,0x1000)
   tick=20000000 if case=='draw-odd' else 16000000
   emu.mem_write(0x80140200,tick.to_bytes(4,'little'))
-  emu.mem_write(0x80573,bytes([0x42,0x35,0x03,7,0x18,0x10]))
+  hour=int(case[4:]) if case.startswith('12h-') else 3
+  bcd_hour=(hour//10)*16+hour%10
+  encoded_hour=bcd_hour|(128 if case.startswith('12h-') else 0)
+  minute=0x59 if case.startswith('12h-') else 0x35
+  emu.mem_write(0x80573,bytes([seconds,minute,encoded_hour,7,0x18,0x10]))
   level={'battery-42':42,'battery-100':100,'battery-invalid':255}.get(case,0)
   emu.mem_write(0x80b70,bytes([level]));ctypes.c_ubyte.in_dll(dll,'battery_level').value=level
   emu.mem_write(0x819e0,b'\xaa'*30720);emu.mem_write(0x80b6c,(65535).to_bytes(4,'little'))
@@ -30,7 +34,7 @@ def verify(payload,stock,folder):
   emu.reg_write(UC_RISCV_REG_GP,0x80800);emu.reg_write(UC_RISCV_REG_SP,0x9ff00);emu.reg_write(UC_RISCV_REG_RA,0x10000)
   saved={r:0x12340000+i for i,r in enumerate(regs)}
   for r,v in saved.items():emu.reg_write(r,v)
-  rtc=[0,0,seconds,0x35,0x03,0x18,0,0x10,0x26]
+  rtc=[0,0,seconds,minute,encoded_hour,0x18,0,0x10,0x26]
   calls=[];writes=[]
   def hardware(uc,address,size,user):
    if address==0x6eac:
@@ -63,17 +67,20 @@ def verify(payload,stock,folder):
    # A real second call, retaining target RAM state, must advance the clock.
    tick+=16000000;emu.mem_write(0x80140200,tick.to_bytes(4,'little'))
    emu.reg_write(UC_RISCV_REG_RA,0x10000);emu.emu_start(0x7110,0x10000,count=2000000)
-   rtc[2]=0x43;(ctypes.c_ubyte*9).in_dll(dll,'rtc')[:]=rtc
+   if case.startswith('12h-'):
+    next_hour=(hour+1)%24;rtc[2]=0;rtc[3]=0;rtc[4]=((next_hour//10)*16+next_hour%10)|128
+   else:rtc[2]=0x43
+   (ctypes.c_ubyte*9).in_dll(dll,'rtc')[:]=rtc
    ctypes.c_uint.in_dll(dll,'tick').value=tick;dll.render()
    assert bytes(emu.mem_read(0x819e0,30720))==bytes((ctypes.c_ubyte*30720).in_dll(dll,'framebuffer')),'Second target frame did not advance'
   results.append({'case':case,'passed':True,'writes':len(writes),'hardware_calls':calls})
  # The new command is a register-preserving branch inside the stock dispatcher.
  bridge=int.from_bytes(payload[0x1e78c:0x1e790],'little')
  all_regs=[UC_RISCV_REG_RA,UC_RISCV_REG_T0,UC_RISCV_REG_T1,UC_RISCV_REG_T2,UC_RISCV_REG_T3,UC_RISCV_REG_T4,UC_RISCV_REG_T5,UC_RISCV_REG_T6,UC_RISCV_REG_A0,UC_RISCV_REG_A1,UC_RISCV_REG_A2,UC_RISCV_REG_A3,UC_RISCV_REG_A4,UC_RISCV_REG_A5,UC_RISCV_REG_A6,UC_RISCV_REG_A7]+regs
- for bad in (False,True):
+ for clock_hour,bad in ((0x13,False),(0x80,False),(0x92,False),(0xa3,False),(0xa4,True),(0x93,True)):
   uc=Uc(UC_ARCH_RISCV,UC_MODE_RISCV32);uc.mem_map(0,0x100000);uc.mem_map(0x20000000,0x40000);uc.mem_write(0x20000000,payload)
-  packet=bytearray([4,0,0,24,6,0,0,0,0x42,0x35,0x13,7,0x18,0x10])+bytearray(50)
-  if bad:packet[8]=0x6a
+  packet=bytearray([4,0,0,24,6,0,0,0,0x42,0x35,clock_hour,7,0x18,0x10])+bytearray(50)
+  if bad and clock_hour!=0xa4:packet[8]=0x6a
   uc.mem_write(0x89400,bytes(packet));uc.mem_write(0x80573,b'\xaa'*6);uc.reg_write(UC_RISCV_REG_SP,0x9ff00)
   original={reg:0x12345600+i for i,reg in enumerate(all_regs)};original[UC_RISCV_REG_S0]=0x89400
   for reg,value in original.items():uc.reg_write(reg,value)

@@ -21,7 +21,7 @@ So we built our own. The USB protocol was worked out from scratch, every command
 The EXE is **not code-signed**, so Windows SmartScreen may warn on first launch. Choose **More info → Run anyway**, and only do this for a file you downloaded from this repository. Each release includes `SHA256SUMS.txt`. Check your download in PowerShell:
 
 ```powershell
-Get-FileHash .\VGN-X68-Custom-Firmware-0.7.0-Windows.exe -Algorithm SHA256
+Get-FileHash .\VGN-X68-Custom-Firmware-0.8.0-Windows.exe -Algorithm SHA256
 ```
 
 Plug the keyboard in with a USB cable and set its mode switch to wired. The app finds it on its own.
@@ -34,7 +34,7 @@ Plug the keyboard in with a USB cable and set its mode switch to wired. The app 
 | **Keymap** | See saved actions after reopening, click a physical key and choose keyboard actions (F13-F24 included) or media controls (play/pause, previous/next track, mute, volume). Collect changes in a draft and send them in one go. Selecting a macro key loads its saved slot. Fn and firmware functions stay protected |
 | **Macros** | 16 macro slots stored on the keyboard itself. Write `CTRL+C`, `WAIT 100`, `ENTER` and so on, one per line |
 | **Screen** | Send a PNG, JPG, GIF, WEBP or BMP to the 160×96 LCD, with crop, fit or stretch. GIFs are sampled into 8 frames |
-| **Clock** | Keeps the keyboard's clock in sync with your computer while the app is open |
+| **Clock** | Choose 24-hour or 12-hour AM/PM display; keeps the keyboard's clock in sync with your computer while the app is open (12-hour mode needs Lavender Quest 0.8.0 and wired USB) |
 | **Battery** | Pack voltage from the keyboard's own ADC, a plain verdict, and a charge-trend check while monitoring |
 | **Firmware** | Install Lavender Quest (custom LCD desktop) or roll back to VGN's original V0113 |
 | **Knowledge** | Everything we verified about the X68, ready to copy into an AI chat or export |
@@ -64,7 +64,7 @@ While building this we mapped every pin the firmware drives. The X68's charger c
 
 ## Testing
 
-- **104 automated tests**: packet encoding and checksums, settings and keymap decoding, saved key assignments after reopening, media action encoding and reassignment, the macro compiler, image conversion, firmware OTA framing, patch rebuilds against the reviewed hashes, battery maths and UI regressions. Run them with `npm test`.
+- **108 automated tests**: packet encoding and checksums, settings and keymap decoding, saved key assignments after reopening, media action encoding and reassignment, the macro compiler, image conversion, firmware OTA framing, patch rebuilds against the reviewed hashes, battery maths and UI regressions. Run them with `npm test`.
 - **Emulated before flashed.** The custom LCD renderer is compiled for RV32 and run in an emulator against the real firmware image before any build is allowed onto a keyboard.
 - **Checked on real hardware.** Lighting, keymap and macro writes with readback, firmware installs with CRC checks, clock sync and battery reads were all run on a real X68. Custom GIF playback on the physical LCD is still waiting for confirmation.
 

@@ -7,6 +7,15 @@ from x68.battery import decode_battery
 from x68.settings import PHYSICAL_KEY_INDICES, encode_key, keymap_entries, compile_macro
 
 class StudioTests(unittest.TestCase):
+ def test_clock_display_at_midnight_noon_and_evening(self):
+  from datetime import datetime
+  a=self.app
+  for hour,twelve in ((0,'12:05 AM'),(11,'11:05 AM'),(12,'12:05 PM'),(13,'01:05 PM'),(23,'11:05 PM')):
+   a.clock_format.set('12-hour (AM/PM)');self.assertEqual(a.format_time(datetime(2026,10,20,hour,5)),twelve)
+   a.clock_format.set('24-hour');self.assertEqual(a.format_time(datetime(2026,10,20,hour,5)),f'{hour:02d}:05')
+ def test_clock_format_choice_is_saved_without_immediate_device_write(self):
+  a=self.app;a.save_preferences=Mock();a.submit=Mock();a.clock_format.set('12-hour (AM/PM)')
+  a.clock_format_preference();a.save_preferences.assert_called_once_with(clock_hour_format=12);a.submit.assert_not_called()
  def setUp(self):
   try:self.root=tk.Tk()
   except tk.TclError as error:self.skipTest(str(error))

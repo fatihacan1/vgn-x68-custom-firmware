@@ -417,18 +417,23 @@ class SettingsClient:
                     'backup':backup,'changed_offsets':changed,
                     'rtc_running_requires_physical_confirmation':True}
 
-    def sync_clock_live(self, firmware_crc, moment=None, receiver=False):
+    def sync_clock_live(self, firmware_crc, moment=None, receiver=False, hour_format=24):
         """Custom 0.5.1 command 18, RAM only.
 
         Over the 2.4 GHz receiver the version reply is the receiver's CRC, so the keyboard's
         build cannot be checked. Stock V0113 routes command 18 to its unsupported handler,
         so sending it there unverified changes nothing.
         """
-        from .firmware import LIVE_CLOCK_CRCS
+        from .firmware import LIVE_CLOCK_CRCS, CLOCK_FORMAT_CRC
         if not receiver and firmware_crc not in LIVE_CLOCK_CRCS:
             raise ProtocolError('Live clock sync requires the reviewed Lavender Quest 0.5.1 firmware.')
+        if hour_format not in (12,24):
+            raise ProtocolError('Clock format must be 12 or 24 hours.')
+        if hour_format == 12 and firmware_crc != CLOCK_FORMAT_CRC:
+            raise ProtocolError('12-hour display requires Lavender Quest 0.8.0 verified over wired USB.')
         moment=moment or datetime.now().astimezone()
         fields=bytes((n//10)*16+n%10 for n in [moment.second,moment.minute,moment.hour,moment.isoweekday(),moment.day,moment.month])
+        if hour_format == 12:fields=fields[:2]+bytes([fields[2]|128])+fields[3:]
         with self._device() as device:
             self._exchange(device,24,data=fields)
         return {'local_time':moment.isoformat(),'clock_fields_bcd':fields.hex(' '),'persistent_flash_write':False}

@@ -5,7 +5,7 @@ Do not turn GPIO states into charging-current claims.
 """
 from datetime import datetime
 from .protocol import ProtocolError
-from .firmware import BATTERY_DIAGNOSTIC_CRC
+from .firmware import BATTERY_DIAGNOSTIC_CRC, BATTERY_DIAGNOSTIC_CRCS
 
 def decode_snapshot(data):
     if len(data)!=48 or data[:4]!=b'XBD\x01':raise ProtocolError('Unknown diagnostic snapshot format.')
@@ -43,6 +43,6 @@ def decode_snapshot(data):
             'limitation':'Cached ADC counts and native arithmetic only. No new ADC conversion, calibrated voltage/current or physical charge measurement.'}
 
 def query_snapshot(settings,version):
-    if version.get('reported_crc')!=BATTERY_DIAGNOSTIC_CRC:raise ProtocolError('Exact experimental battery-diagnostic firmware is required; no diagnostic command sent.')
+    if version.get('reported_crc') not in BATTERY_DIAGNOSTIC_CRCS:raise ProtocolError('Exact experimental battery-diagnostic firmware is required; no diagnostic command sent.')
     with settings._device() as device:data=settings._exchange(device,25,size=48)
     return decode_snapshot(data)

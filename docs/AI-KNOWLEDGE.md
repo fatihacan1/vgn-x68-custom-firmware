@@ -285,3 +285,23 @@ physical readings must be recorded separately; do not infer them from emulation.
   or further hardware evidence. No charging repair is claimed. User was asked
   for DC voltage across PH1 B+/B- with USB removed and then connected; no readings
   have yet been supplied. Do not invent them or bypass battery protections.
+
+
+## 0.8.0: selectable 12/24-hour clock
+
+- App and Lavender Quest 0.8.0 add a Screen > Clock > Time format selector.
+  Default is 24-hour; 12-hour renders 12 AM at midnight and 12 PM at noon.
+- Command 18 hex still writes exactly six RAM bytes. Bit 7 of the BCD hour
+  selects 12-hour display; the remaining hour bits keep 00..23 timekeeping.
+  The renderer masks the flag before arithmetic and adds an AM/PM label.
+- Only the exact 0.8.0 CRC 1383FD83 accepts 12-hour mode from the app.
+  Use wired USB for verification; older builds receive ordinary 24-hour sync.
+- The app saves clock_hour_format locally and reapplies it through live sync.
+  After full keyboard power loss, reopen the app to resync. With automatic
+  sync disabled, use Sync time now to send a format change.
+- Firmware SHA256: 4989ee7f2c9f5400ea327090354192772c957315528b9a76346537ebaf730288.
+  Renderer: 4193 bytes, SHA256
+  2b0be6928321db6cecf09a83344d4f8b5bac335990f612ac70264e46d430647e.
+- RV32/host framebuffer equivalence includes 00, 01, 11, 12, 13, 23 hours and
+  ticking through noon/midnight. Command register preservation, write bounds,
+  battery diagnostics and media reads pass emulation. Charging code is unchanged.

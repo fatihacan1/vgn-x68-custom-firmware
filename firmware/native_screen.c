@@ -111,18 +111,36 @@ void render(void) {
   *(volatile u32 *)clock_cache=previous+steps*16000000;
   clock_cache[4]=(u8)elapsed;clock_cache[5]=(u8)(elapsed>>8);clock_cache[6]=(u8)(elapsed>>16);
  }
- u32 total=((snapshot[2]>>4)*10+(snapshot[2]&15))*3600+
+ u32 total=(((snapshot[2]&127)>>4)*10+(snapshot[2]&15))*3600+
            ((snapshot[1]>>4)*10+(snapshot[1]&15))*60+
            ((snapshot[0]>>4)*10+(snapshot[0]&15))+elapsed;
  unsigned ss=total%60,mm=(total/60)%60,hh=(total/3600)%24;
  u8 second=(u8)((ss/10)*16+ss%10),minute=(u8)((mm/10)*16+mm%10),hour=(u8)((hh/10)*16+hh%10);
  u8 day=snapshot[4],month=snapshot[5];
 #endif
+ /* Hour bit 7 selects 12-hour display; timekeeping stays in 24-hour BCD. */
+#ifdef SCREEN_HOST
+ unsigned twelve=read_clock(4)&128;
+#else
+ unsigned twelve=snapshot[2]&128;
+#endif
+ unsigned hour24=(hour>>4)*10+(hour&15);
+ if(twelve){
+  unsigned display=hour24%12;if(!display)display=12;
+  hour=(u8)((display/10)*16+display%10);
+ }
  for(unsigned i=0;i<30720;i++) FB[i]=BG[i];
  /* Time from synced parameters + MCU time; never a painted sample clock. */
  pair(hour,10,24,2,0xf7bf); pair(minute,39,24,2,0xf7bf);
  pixel(35,28,0x7f7b);pixel(35,33,0x7f7b);
  pair(second,67,31,1,0x7f7b);
+ if(twelve){
+  const u8 letters[3][7]={{14,17,17,31,17,17,17},{30,17,17,30,16,16,16},{17,27,21,21,17,17,17}};
+  for(int row=0;row<7;row++)for(int col=0;col<5;col++){
+   if(letters[hour24>=12?1:0][row]&(16>>col))pixel(85+col,31+row,0x7f7b);
+   if(letters[2][row]&(16>>col))pixel(91+col,31+row,0x7f7b);
+  }
+ }
  pair(day,108,24,1,0xe51f);pair(month,127,24,1,0xe51f);
  pixel(122,27,0xe51f);pixel(121,28,0xe51f);pixel(120,29,0xe51f);
  /* Idle sprite: a slow eye blink, scarf flutter and a spinning gold coin. */
@@ -200,7 +218,8 @@ __attribute__((used,noinline)) void clock_command(volatile u8 *packet) {
            packet[5]==0 && packet[6]==0 && packet[7]==0;
  const u8 maximum[6]={59,59,23,7,31,12};
  for(unsigned i=0;i<6;i++){
-  unsigned b=packet[8+i],value=(b>>4)*10+(b&15);
+  unsigned b=packet[8+i];if(i==2)b&=127;
+  unsigned value=(b>>4)*10+(b&15);
   if((b&15)>9 || (b>>4)>9 || value>maximum[i] || (i>=3 && value==0))valid=0;
  }
  if(!valid){packet[7]=255;return;}

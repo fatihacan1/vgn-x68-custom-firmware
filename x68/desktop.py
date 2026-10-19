@@ -9,7 +9,7 @@ from .protocol import X68Client
 from .settings import SettingsClient, HID_KEYS, MODIFIERS, MEDIA_KEYS, PHYSICAL_KEY_INDICES, compile_macro, macro_text
 from .battery import query_battery, BatteryHistory
 from .battery_health import ASSUMPTION, ChargeTrend, estimate
-from .firmware import LIVE_CLOCK_CRC, LIVE_CLOCK_CRCS, BATTERY_DIAGNOSTIC_CRC
+from .firmware import LIVE_CLOCK_CRC, LIVE_CLOCK_CRCS, BATTERY_DIAGNOSTIC_CRC, BATTERY_DIAGNOSTIC_CRCS, CLOCK_FORMAT_CRC
 from .media import convert_media, upload_media, set_screen
 from . import autostart, firmware_source
 from PIL import Image, ImageTk, ImageOps
@@ -58,6 +58,7 @@ class Studio:
   except (OSError,ValueError):preferences={}
   self.auto_clock=tk.BooleanVar(value=preferences.get('auto_clock',True));self.clock_note=tk.StringVar(value='Waiting for a verified 0.5.1+ connection.')
   self.clock_interval=tk.StringVar(value=str(preferences.get('clock_interval_minutes',5)) if str(preferences.get('clock_interval_minutes',5)) in ('1','2','5','10','15','30','60') else '5')
+  self.clock_format=tk.StringVar(value='12-hour (AM/PM)' if preferences.get('clock_hour_format')==12 else '24-hour')
   self.start_on_login=tk.BooleanVar(value=autostart.enabled())
   root.title('VGN X68 Custom Firmware');root.geometry('1240x860');root.minsize(1180,820);root.configure(bg=pixel.DESK)
   pixel.load_fonts(ASSETS/'assets/fonts')
@@ -147,9 +148,11 @@ class Studio:
   self.typing=min(len(text),self.typing+4);done=self.typing>=len(text)
   self.typed.set(text[:self.typing]+(' ▼' if done else ''))
   if not done:self.root.after(16,self.reveal)
+ def format_time(self,moment):
+  return f'{moment.hour%12 or 12:02d}:{moment.minute:02d} '+('AM' if moment.hour<12 else 'PM') if self.clock_format.get()=='12-hour (AM/PM)' else moment.strftime('%H:%M')
  def tick_clock(self):
   if self.closed:return
-  now=datetime.now();self.clock_text.set(now.strftime('%H:%M'));self.clock_date.set(now.strftime('%d.%m.%Y'))
+  now=datetime.now();self.clock_text.set(self.format_time(now));self.clock_date.set(now.strftime('%d.%m.%Y'))
   self.root.after(1000*(60-now.second) if now.second else 1000,self.tick_clock)
  def show(self,name):
   if self.flashing:return
@@ -319,7 +322,7 @@ class Studio:
  def update_firmware_preview(self):
   name=self.build.get();original=name=='Original V0113';external=name.startswith('Selected file:')
   self.preview_title.set('ORIGINAL V0113' if original else ('YOUR FIRMWARE' if external else 'X68 PIXEL DESKTOP'))
-  self.preview_note.set('VGN\'s factory firmware, unchanged. Use it to roll back.' if original else ('No trusted visual preview for an imported binary. Inspect its checks before installing.' if external else 'Single purple pixel scene.\nRAM clock sync and image/GIF player.'+('\nBattery voltage readout for the Battery page.' if '0.6.0' in name else '')+'\nTheme illustration / sample time.'))
+  self.preview_note.set('VGN\'s factory firmware, unchanged. Use it to roll back.' if original else ('No trusted visual preview for an imported binary. Inspect its checks before installing.' if external else 'Single purple pixel scene.\nRAM clock sync and image/GIF player.'+('\nBattery voltage readout for the Battery page.' if '0.6.0' in name or '0.8.0' in name else '')+'\nTheme illustration / sample time.'))
   preview=ASSETS/'assets/pixel/lcd-preview.png'
   if original or external:
    self.firmware_preview.configure(image='',text=' FACTORY FIRMWARE \n\n VGN V0113 ' if original else ' CUSTOM BINARY \n\n NO TRUSTED PREVIEW ',font=HEAD,foreground=MUTED,width=23,padding=30)
@@ -368,6 +371,10 @@ class Studio:
   f=tk.Frame(clock,bg=PANEL);f.pack(anchor='w',pady=6);tk.Label(f,text='Every',font=BODY,bg=PANEL,fg=INK).pack(side='left')
   interval=ttk.Combobox(f,textvariable=self.clock_interval,values=['1','2','5','10','15','30','60'],state='readonly',width=4);interval.pack(side='left',padx=10);interval.bind('<<ComboboxSelected>>',lambda event:self.clock_preference())
   tk.Label(f,text='minutes',font=BODY,bg=PANEL,fg=INK).pack(side='left')
+  f=tk.Frame(clock,bg=PANEL);f.pack(anchor='w',pady=6);tk.Label(f,text='Time format',font=BODY,bg=PANEL,fg=INK).pack(side='left')
+  self.clock_format_choice=ttk.Combobox(f,textvariable=self.clock_format,values=['24-hour','12-hour (AM/PM)'],state='readonly',width=18);self.clock_format_choice.pack(side='left',padx=10)
+  self.clock_format_choice.bind('<<ComboboxSelected>>',lambda event:self.clock_format_preference())
+  tk.Label(clock,text='12-hour display requires Lavender Quest 0.8.0 and wired USB. Press Sync time now to apply.',font=BODY,bg=PANEL,fg=MUTED,wraplength=380,justify='left').pack(anchor='w')
   startup=ttk.Checkbutton(clock,text='Launch when I sign in to Windows',variable=self.start_on_login,command=self.startup_preference,style='Field.TCheckbutton');startup.pack(anchor='w',pady=4)
   if sys.platform!='win32':startup.configure(state='disabled')
   tk.Label(clock,textvariable=self.clock_note,font=BODY,bg=PANEL,fg=MINT,wraplength=380,justify='left').pack(anchor='w',pady=8)
@@ -406,6 +413,10 @@ class Studio:
  def screen_changed(self):self.next_clock_sync=0;self.status.set('Lavender desktop selected.')
  def clock_preference(self):
   WORK.mkdir(parents=True,exist_ok=True);self.save_preferences(auto_clock=self.auto_clock.get(),clock_interval_minutes=int(self.clock_interval.get()));self.next_clock_sync=0
+ def clock_format_preference(self):
+  self.save_preferences(clock_hour_format=12 if self.clock_format.get()=='12-hour (AM/PM)' else 24)
+  self.next_clock_sync=0;self.clock_text.set(self.format_time(datetime.now()))
+  self.clock_note.set('Time format saved. Press Sync time now to apply to the keyboard.')
  def startup_preference(self):
   try:
    autostart.configure(self.start_on_login.get());self.status.set('Windows startup enabled.' if self.start_on_login.get() else 'Windows startup disabled.')
@@ -416,8 +427,11 @@ class Studio:
   if not wireless and (not self.version or self.version.get('reported_crc') not in LIVE_CLOCK_CRCS):
    self.next_clock_sync=time.monotonic()+60;return self.clock_note.set('Live sync requires Lavender Quest 0.5.1 or newer. Install it in Firmware.')
   if self.busy:return
+  hour_format=12 if self.clock_format.get()=='12-hour (AM/PM)' else 24
+  if hour_format==12 and (wireless or self.version['reported_crc']!=CLOCK_FORMAT_CRC):
+   self.next_clock_sync=float('inf');return self.clock_note.set('12-hour display needs Lavender Quest 0.8.0. Install it in Firmware and connect with wired USB.')
   crc=self.version['reported_crc'];self.next_clock_sync=time.monotonic()+60
-  self.submit('Syncing keyboard clock',lambda:self.settings_client.sync_clock_live(crc,receiver=wireless),self.clock_synced)
+  self.submit('Syncing keyboard clock',lambda:self.settings_client.sync_clock_live(crc,receiver=wireless,hour_format=hour_format),self.clock_synced)
  def clock_synced(self,result):
   self.next_clock_sync=time.monotonic()+int(self.clock_interval.get())*60;self.clock_note.set('Synced from computer: '+result['local_time'][:19].replace('T',' ')+'  /  RAM only');self.status.set('Keyboard date and time synchronized.')
 
@@ -431,7 +445,7 @@ class Studio:
   try:self.knowledge=(ASSETS/'docs/AI-KNOWLEDGE.md').read_text(encoding='utf-8')
   except OSError:self.knowledge='Knowledge file missing. Use the complete application folder.'
   text.insert('1.0',self.knowledge);text.configure(state='disabled')
- def knowledge_record(self):return {'application':'VGN X68 Custom Firmware','version':'0.6.1','custom_crc':BATTERY_DIAGNOSTIC_CRC,'format':'Markdown','context':self.knowledge,'unknowns':['Battery current and charge control (voltage is an estimate via an inferred 1:2 divider)','Early SUBOR splash storage','Physical macOS validation','Custom-media physical validation pending']}
+ def knowledge_record(self):return {'application':'VGN X68 Custom Firmware','version':'0.8.0','custom_crc':CLOCK_FORMAT_CRC,'format':'Markdown','context':self.knowledge,'unknowns':['Battery current and charge control (voltage is an estimate via an inferred 1:2 divider)','Early SUBOR splash storage','Physical macOS validation','Custom-media physical validation pending']}
  def copy_knowledge(self):self.root.clipboard_clear();self.root.clipboard_append(self.knowledge);self.status.set('AI context copied to clipboard.')
  def export_knowledge(self):
   path=filedialog.asksaveasfilename(parent=self.root,initialfile='X68-AI-KNOWLEDGE.md',defaultextension='.md',filetypes=[('Markdown','*.md')])
@@ -494,7 +508,7 @@ class Studio:
   except (OSError,ValueError):preferences={}
   WORK.mkdir(parents=True,exist_ok=True);(WORK/'preferences.json').write_text(json.dumps({**preferences,**values}),encoding='utf-8')
  def show_version(self,result):
-  self.version=result;self.next_clock_sync=0;crc=result['reported_crc'];known={'14961BE6':'Original V0113','EF331DCE':'Lavender Quest 0.4.0','4CB077DE':'Lavender Quest 0.4.1','FC2EBCFE':'Lavender Quest 0.4.2','3C866A9B':'Lavender Quest 0.5.0',LIVE_CLOCK_CRC:'Lavender Quest 0.5.1',BATTERY_DIAGNOSTIC_CRC:'Lavender Quest 0.6.0'}
+  self.version=result;self.next_clock_sync=0;crc=result['reported_crc'];known={'14961BE6':'Original V0113','EF331DCE':'Lavender Quest 0.4.0','4CB077DE':'Lavender Quest 0.4.1','FC2EBCFE':'Lavender Quest 0.4.2','3C866A9B':'Lavender Quest 0.5.0',LIVE_CLOCK_CRC:'Lavender Quest 0.5.1',BATTERY_DIAGNOSTIC_CRC:'Lavender Quest 0.6.0',CLOCK_FORMAT_CRC:'Lavender Quest 0.8.0'}
   if self.inventory and self.inventory.get('transport')=='wireless':known={}
   self.installed.set('Installed: '+known.get(crc,'Unrecognized build')+'  /  CRC '+crc if known else 'Installed build: not reported over 2.4 GHz  /  receiver CRC '+crc)
   self.status.set('Version read complete / '+known.get(crc,'Unknown build')+' / CRC '+crc)
@@ -624,7 +638,7 @@ class Studio:
   version=dict(self.version or {})
   def read():
    result={'report':query_battery(self.settings_client)}
-   if version.get('reported_crc')==BATTERY_DIAGNOSTIC_CRC:
+   if version.get('reported_crc') in BATTERY_DIAGNOSTIC_CRCS:
     from .battery_diagnostic import query_snapshot
     result['snapshot']=query_snapshot(self.settings_client,version)
    return result
@@ -709,7 +723,7 @@ class Studio:
  def save_json(self,data,name):
   path=filedialog.asksaveasfilename(parent=self.root,initialfile=name,defaultextension='.json',filetypes=[('JSON','*.json')])
   if path:Path(path).write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8');self.status.set('File saved.')
- def report(self):return {'app':'VGN X68 Custom Firmware 0.6.0','inventory':self.inventory,'version':self.version,'settings':self.settings,'packets':self.settings_client.trace,'battery':self.history.report(),'logs':self.logs}
+ def report(self):return {'app':'VGN X68 Custom Firmware 0.8.0','inventory':self.inventory,'version':self.version,'settings':self.settings,'packets':self.settings_client.trace,'battery':self.history.report(),'logs':self.logs}
  def details(self):
   self.raw.configure(state='normal');self.raw.delete('1.0','end');self.raw.insert('1.0',json.dumps(self.report(),ensure_ascii=False,indent=2));self.raw.configure(state='disabled')
   self.log_text.configure(state='normal');self.log_text.delete('1.0','end');self.log_text.insert('1.0',json.dumps(self.logs,ensure_ascii=False,indent=2));self.log_text.configure(state='disabled')

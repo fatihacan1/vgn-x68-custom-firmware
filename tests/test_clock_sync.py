@@ -4,7 +4,7 @@ from pathlib import Path
 import unittest
 from x68.settings import SettingsClient
 from x68.settings import settings_packet
-from x68.firmware import LIVE_CLOCK_CRC
+from x68.firmware import LIVE_CLOCK_CRC, CLOCK_FORMAT_CRC
 from x68.protocol import ProtocolError
 
 class MemoryClock(SettingsClient):
@@ -19,6 +19,21 @@ class MemoryClock(SettingsClient):
     def _backup(self,kind,data):return 'mock-backup.json'
 
 class ClockTests(unittest.TestCase):
+    def test_twelve_hour_flag_keeps_24_hour_time_and_can_be_cleared(self):
+        for hour in (0,1,11,12,13,23):
+            client=MemoryClock();sent=[];client._exchange=lambda device,command,**kw:sent.append(kw['data'])
+            moment=datetime(2026,10,20,hour,2,9)
+            client.sync_clock_live(CLOCK_FORMAT_CRC,moment,hour_format=12)
+            client.sync_clock_live(CLOCK_FORMAT_CRC,moment,hour_format=24)
+            self.assertEqual(sent[0][2],sent[1][2]|128)
+            self.assertEqual(sent[1][2],(hour//10)*16+hour%10)
+            self.assertEqual(sent[0][:2]+sent[0][3:],sent[1][:2]+sent[1][3:])
+            self.assertEqual(client.writes,[])
+    def test_unsupported_format_never_reaches_device(self):
+        for crc,receiver,fmt in ((LIVE_CLOCK_CRC,False,12),('receiver',True,12),(CLOCK_FORMAT_CRC,False,13)):
+            client=MemoryClock();sent=[];client._exchange=lambda *a,**kw:sent.append(kw)
+            with self.assertRaises(ProtocolError):client.sync_clock_live(crc,receiver=receiver,hour_format=fmt)
+            self.assertEqual(sent,[])
     def test_live_clock_is_one_ram_command_without_parameter_write(self):
         client=MemoryClock();sent=[];client._exchange=lambda device,command,**kw:sent.append((command,kw))
         result=client.sync_clock_live(LIVE_CLOCK_CRC,datetime(2026,10,18,15,2,9))
