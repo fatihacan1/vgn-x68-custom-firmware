@@ -19,7 +19,8 @@ from .firmware import V0113_SHA256, V0113_SIZE
 UPDATER_URL = 'https://cdn.vgnclub.com/vgn/driver/X68/' + urllib.parse.quote('X68-V0113固件升级.exe')
 UPDATER_SHA256 = 'cdf4535a909900c7644e496d415552c6b210f0f87afb77c80a54782e571bd771'
 PATCHES = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parents[1])) / 'firmware-patches'
-BUILDS = {'Lavender Quest 0.8.0 / 12-24 hour clock': 'lavender-quest-0.8.0',
+BUILDS = {'Lavender Quest 0.9.0 / live mode and lock': 'lavender-quest-0.9.0',
+          'Lavender Quest 0.8.0 / 12-24 hour clock': 'lavender-quest-0.8.0',
           'Lavender Quest 0.6.0 / battery health': 'lavender-quest-0.6.0',
           'Lavender Quest 0.5.1': 'lavender-quest-0.5.1',
           'Original V0113': None}

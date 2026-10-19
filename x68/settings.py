@@ -424,13 +424,13 @@ class SettingsClient:
         build cannot be checked. Stock V0113 routes command 18 to its unsupported handler,
         so sending it there unverified changes nothing.
         """
-        from .firmware import LIVE_CLOCK_CRCS, CLOCK_FORMAT_CRC
+        from .firmware import LIVE_CLOCK_CRCS, CLOCK_FORMAT_CRCS
         if not receiver and firmware_crc not in LIVE_CLOCK_CRCS:
             raise ProtocolError('Live clock sync requires the reviewed Lavender Quest 0.5.1 firmware.')
         if hour_format not in (12,24):
             raise ProtocolError('Clock format must be 12 or 24 hours.')
-        if hour_format == 12 and firmware_crc != CLOCK_FORMAT_CRC:
-            raise ProtocolError('12-hour display requires Lavender Quest 0.8.0 verified over wired USB.')
+        if hour_format == 12 and firmware_crc not in CLOCK_FORMAT_CRCS:
+            raise ProtocolError('12-hour display requires Lavender Quest 0.8.0 or newer verified over wired USB.')
         moment=moment or datetime.now().astimezone()
         fields=bytes((n//10)*16+n%10 for n in [moment.second,moment.minute,moment.hour,moment.isoweekday(),moment.day,moment.month])
         if hour_format == 12:fields=fields[:2]+bytes([fields[2]|128])+fields[3:]

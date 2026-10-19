@@ -10,6 +10,7 @@ __declspec(dllexport) u8 background[30720];
 __declspec(dllexport) u8 rtc[9];
 __declspec(dllexport) u32 tick;
 __declspec(dllexport) u8 battery_level;
+__declspec(dllexport) u8 os_mode,win_lock;
 __declspec(dllexport) u8 media_data[245760];
 __declspec(dllexport) u8 media_mode,media_count;
 __declspec(dllexport) u32 media_period;
@@ -44,6 +45,23 @@ static void digit(int n,int x,int y,int scale,unsigned color) {
 static void pair(u8 bcd,int x,int y,int scale,unsigned color) {
  digit((bcd>>4)&15,x,y,scale,color);
  digit(bcd&15,x+6*scale,y,scale,color);
+}
+/* Small header labels: mode and lock are read from the native Fn state. */
+static void label(const char *text,int x,int y,unsigned color) {
+ static const char alphabet[]="ACFIKLMNOW:";
+ static const u8 glyphs[11][7]={
+  {14,17,17,31,17,17,17},{15,16,16,16,16,16,15},
+  {31,16,16,30,16,16,16},{14,4,4,4,4,4,14},
+  {17,18,20,24,20,18,17},{16,16,16,16,16,16,31},
+  {17,27,21,21,17,17,17},{17,25,21,19,17,17,17},
+  {14,17,17,17,17,17,14},{17,17,17,21,21,27,17},
+  {0,4,4,0,4,4,0}
+ };
+ for(;*text;text++,x+=6)for(unsigned n=0;n<11;n++)if(alphabet[n]==*text){
+  for(int row=0;row<7;row++)for(int col=0;col<5;col++)
+   if(glyphs[n][row]&(16>>col))pixel(x+col,y+row,color);
+  break;
+ }
 }
 #ifdef SCREEN_HOST
 __declspec(dllexport)
@@ -130,6 +148,16 @@ void render(void) {
   hour=(u8)((display/10)*16+display%10);
  }
  for(unsigned i=0;i<30720;i++) FB[i]=BG[i];
+#ifdef SCREEN_HOST
+ unsigned mac=os_mode,locked=win_lock;
+#else
+ /* V0113 Fn action 43 writes parameter 1B; action 04 toggles 15.
+  * Read the live RAM block, not the persisted settings response. */
+ unsigned mac=*(volatile u8 *)0x0008056b;
+ unsigned locked=*(volatile u8 *)0x00080565;
+#endif
+ label(mac?"MAC":"WIN",64,3,0xb79b);
+ label(locked?"L:ON":"L:OFF",88,3,locked?0xf6b1:0xd6ba);
  /* Time from synced parameters + MCU time; never a painted sample clock. */
  pair(hour,10,24,2,0xf7bf); pair(minute,39,24,2,0xf7bf);
  pixel(35,28,0x7f7b);pixel(35,33,0x7f7b);

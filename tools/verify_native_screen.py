@@ -16,7 +16,7 @@ def verify(payload,stock,folder):
  (ctypes.c_ubyte*30720).in_dll(dll,'background')[:]=payload[0x31664:0x38e64]
  regs=[UC_RISCV_REG_S0,UC_RISCV_REG_S1,UC_RISCV_REG_S2,UC_RISCV_REG_S3,UC_RISCV_REG_S4,UC_RISCV_REG_S5,UC_RISCV_REG_S6,UC_RISCV_REG_S7,UC_RISCV_REG_S8,UC_RISCV_REG_S9,UC_RISCV_REG_S10,UC_RISCV_REG_S11]
  results=[]
- for case,seconds,blocked in [('draw-even',0x42,False),('draw-odd',0x42,False),('next-frame-mode-zero',0x42,False),('pending-transfer',0x42,True),('battery-42',0x42,False),('battery-100',0x42,False),('battery-invalid',0x42,False),*[(f'12h-{h:02d}',0x59,False) for h in (0,1,11,12,13,23)]]:
+ for case,seconds,blocked in [('draw-even',0x42,False),('draw-odd',0x42,False),('next-frame-mode-zero',0x42,False),('pending-transfer',0x42,True),('battery-42',0x42,False),('battery-100',0x42,False),('battery-invalid',0x42,False),*[(f'12h-{h:02d}',0x59,False) for h in (0,1,11,12,13,23)],*[(state,0x42,False) for state in ('win-unlocked','win-locked','mac-unlocked','mac-locked')]]:
   emu=Uc(UC_ARCH_RISCV,UC_MODE_RISCV32);emu.mem_map(0,0x100000);emu.mem_map(0x20000000,0x40000)
   emu.mem_write(0x20000000,payload);emu.mem_write(0x1200,payload[0x12b0:0xa0b4])
   emu.mem_map(0x80140000,0x1000)
@@ -27,6 +27,9 @@ def verify(payload,stock,folder):
   encoded_hour=bcd_hour|(128 if case.startswith('12h-') else 0)
   minute=0x59 if case.startswith('12h-') else 0x35
   emu.mem_write(0x80573,bytes([seconds,minute,encoded_hour,7,0x18,0x10]))
+  mac=255 if case.startswith('mac-') else 0;locked=255 if case.endswith('-locked') else 0
+  emu.mem_write(0x8056b,bytes([mac]));emu.mem_write(0x80565,bytes([locked]))
+  ctypes.c_ubyte.in_dll(dll,'os_mode').value=mac;ctypes.c_ubyte.in_dll(dll,'win_lock').value=locked
   level={'battery-42':42,'battery-100':100,'battery-invalid':255}.get(case,0)
   emu.mem_write(0x80b70,bytes([level]));ctypes.c_ubyte.in_dll(dll,'battery_level').value=level
   emu.mem_write(0x819e0,b'\xaa'*30720);emu.mem_write(0x80b6c,(65535).to_bytes(4,'little'))
@@ -73,6 +76,17 @@ def verify(payload,stock,folder):
    (ctypes.c_ubyte*9).in_dll(dll,'rtc')[:]=rtc
    ctypes.c_uint.in_dll(dll,'tick').value=tick;dll.render()
    assert bytes(emu.mem_read(0x819e0,30720))==bytes((ctypes.c_ubyte*30720).in_dll(dll,'framebuffer')),'Second target frame did not advance'
+   if case in ('win-unlocked','win-locked','mac-unlocked','mac-locked'):
+    previous=bytes(emu.mem_read(0x819e0,30720))
+    mac=0 if mac else 255;locked=0 if locked else 255
+    emu.mem_write(0x8056b,bytes([mac]));emu.mem_write(0x80565,bytes([locked]))
+    tick+=4000000;emu.mem_write(0x80140200,tick.to_bytes(4,'little'))
+    emu.reg_write(UC_RISCV_REG_RA,0x10000);emu.emu_start(0x7110,0x10000,count=2000000)
+    ctypes.c_ubyte.in_dll(dll,'os_mode').value=mac;ctypes.c_ubyte.in_dll(dll,'win_lock').value=locked
+    ctypes.c_uint.in_dll(dll,'tick').value=tick;dll.render()
+    current=bytes(emu.mem_read(0x819e0,30720))
+    assert current==bytes((ctypes.c_ubyte*30720).in_dll(dll,'framebuffer')),'Live status differs from host'
+    assert current[:13*320]!=previous[:13*320],'Header did not update within 250 ms'
   results.append({'case':case,'passed':True,'writes':len(writes),'hardware_calls':calls})
  # The new command is a register-preserving branch inside the stock dispatcher.
  bridge=int.from_bytes(payload[0x1e78c:0x1e790],'little')

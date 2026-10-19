@@ -8,7 +8,7 @@ import hashlib, json, sys, zlib
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 LIB = ROOT / 'firmware-library'
-BUILDS = {'lavender-quest-0.8.0': 'lavender-quest-080.bin', 'lavender-quest-0.6.0': 'lavender-quest-060.bin', 'lavender-quest-0.5.1': 'lavender-quest.bin'}
+BUILDS = {'lavender-quest-0.9.0': 'lavender-quest-090.bin', 'lavender-quest-0.8.0': 'lavender-quest-080.bin', 'lavender-quest-0.6.0': 'lavender-quest-060.bin', 'lavender-quest-0.5.1': 'lavender-quest.bin'}
 
 
 def runs(base, target):

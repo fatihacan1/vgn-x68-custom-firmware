@@ -31,7 +31,7 @@ def reflash(payload, stock_reference=None, current_visual_reference=None, progre
     # but never offer the earlier frozen-display versions as install targets.
     frames=list(data_packets(payload,stock_reference,allow_unreviewed=allow_unreviewed))
     final_frame=end_packet(payload,stock_reference,allow_unreviewed=allow_unreviewed)
-    allowed_current_crcs = {V0113_CRC,int.from_bytes(payload[-4:],'little'),0xEF331DCE,0x4CB077DE,0xFC2EBCFE,0x3C866A9B,0x10EE7CA9,0x127F9EB4,0x1383FD83}
+    allowed_current_crcs = {V0113_CRC,int.from_bytes(payload[-4:],'little'),0xEF331DCE,0x4CB077DE,0xFC2EBCFE,0x3C866A9B,0x10EE7CA9,0x127F9EB4,0x1383FD83,0x41815162}
     if current_user_reference is not None:
         from x68.firmware import inspect_custom_firmware
         inspect_custom_firmware(current_user_reference,stock_reference)

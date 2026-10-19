@@ -305,3 +305,29 @@ physical readings must be recorded separately; do not infer them from emulation.
 - RV32/host framebuffer equivalence includes 00, 01, 11, 12, 13, 23 hours and
   ticking through noon/midnight. Command register preservation, write bounds,
   battery diagnostics and media reads pass emulation. Charging code is unchanged.
+
+
+## 0.9.0: live Windows/Mac and Windows-key lock in the LCD header
+
+- Lavender desktop now shows WIN or MAC beside X68.EXE, followed by L:ON
+  (Windows-key lock enabled, gold) or L:OFF (disabled).
+- Both labels read native live RAM on every redraw and work without the PC app.
+  The normal display redraw interval is approximately 250 ms while awake and
+  the original LCD transport is ready. Full-screen custom media stays unchanged.
+- Exact V0113 evidence: Fn table at 1CD1C has cell 31 hex (A), action A0 43 00;
+  cell 32 hex (S) has A0 43 FF. Action 43's dispatch entry at 1CC90 points to
+  20011EC4. ADDIGP at 20011ECC resolves GP 80800 minus 2B0 to RAM 80550;
+  LBU at 20011ED0 and SB at 20011EEC read/write offset 1B, i.e. RAM 8056B.
+  Zero selects Windows; FF selects Mac.
+- Fn table at 1CD54 has cell 51 hex (Windows), action A0 04 00. Dispatch at
+  1CB94 points to 20012200. At 2001220C the same base is loaded; offset 15
+  is read at 20012210, cleared at 20012218, or set to FF at 20012418..1E.
+  This is the live Windows-key lock at RAM 80565, not the host OS key state.
+- Indicators only read these fields; no Fn logic, keymap, USB or charger change.
+  Host/RV32 equivalence covers all four combinations and live toggles within
+  one 250 ms tick. The exact stock-byte evidence has offline regression tests.
+- CRC 41815162; firmware SHA256
+  60090d9b881a7b72cef4d26020a57fa174d74be424f343016de61fb6b14b0742.
+  Renderer 4301 bytes; SHA256
+  3fe674cd2f58c14de403b647e7cfbe42523e251637108cb9cb3608c02d99cfa7.
+  12/24-hour clock, battery diagnostics and media support remain available.

@@ -4,7 +4,7 @@ from pathlib import Path
 import unittest
 from x68.settings import SettingsClient
 from x68.settings import settings_packet
-from x68.firmware import LIVE_CLOCK_CRC, CLOCK_FORMAT_CRC
+from x68.firmware import LIVE_CLOCK_CRC, CLOCK_FORMAT_CRC, DEVICE_STATUS_CRC
 from x68.protocol import ProtocolError
 
 class MemoryClock(SettingsClient):
@@ -19,6 +19,10 @@ class MemoryClock(SettingsClient):
     def _backup(self,kind,data):return 'mock-backup.json'
 
 class ClockTests(unittest.TestCase):
+    def test_live_status_firmware_keeps_twelve_hour_sync(self):
+        client=MemoryClock();sent=[];client._exchange=lambda device,command,**kw:sent.append(kw['data'])
+        client.sync_clock_live(DEVICE_STATUS_CRC,datetime(2026,10,20,13,2,9),hour_format=12)
+        self.assertEqual(sent,[bytes.fromhex('09 02 93 02 20 10')])
     def test_twelve_hour_flag_keeps_24_hour_time_and_can_be_cleared(self):
         for hour in (0,1,11,12,13,23):
             client=MemoryClock();sent=[];client._exchange=lambda device,command,**kw:sent.append(kw['data'])
