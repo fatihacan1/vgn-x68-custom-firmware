@@ -14,7 +14,7 @@ class PatchFormatTests(unittest.TestCase):
  def test_patches_ship_no_large_vendor_runs(self):
   # Patches carry only changed bytes; every build stays far below the 236,916-byte image.
   import json
-  for name in ('lavender-quest-0.9.1','lavender-quest-0.9.0','lavender-quest-0.8.0','lavender-quest-0.6.0','lavender-quest-0.5.1'):
+  for name in ('lavender-quest-0.9.2','lavender-quest-0.9.1','lavender-quest-0.9.0','lavender-quest-0.8.0','lavender-quest-0.6.0','lavender-quest-0.5.1'):
    patch=json.loads((fs.PATCHES/f'{name}.json').read_text())
    self.assertLess(sum(len(r[1])//2 for r in patch['runs']),fs.V0113_SIZE//3)
 
@@ -22,7 +22,7 @@ class PatchFormatTests(unittest.TestCase):
 class LocalBuildTests(unittest.TestCase):
  def test_patched_builds_match_reviewed_images(self):
   stock=STOCK.read_bytes()
-  for name,file in (('lavender-quest-0.9.1','lavender-quest-091.bin'),('lavender-quest-0.9.0','lavender-quest-090.bin'),('lavender-quest-0.8.0','lavender-quest-080.bin'),('lavender-quest-0.6.0','lavender-quest-060.bin'),('lavender-quest-0.5.1','lavender-quest.bin')):
+  for name,file in (('lavender-quest-0.9.2','lavender-quest-092.bin'),('lavender-quest-0.9.1','lavender-quest-091.bin'),('lavender-quest-0.9.0','lavender-quest-090.bin'),('lavender-quest-0.8.0','lavender-quest-080.bin'),('lavender-quest-0.6.0','lavender-quest-060.bin'),('lavender-quest-0.5.1','lavender-quest.bin')):
    self.assertEqual(fs.apply_patch(stock,name),(LIB/file).read_bytes())
  def test_payload_found_inside_wrapper_and_cached(self):
   stock=STOCK.read_bytes();wrapper=b'MZ'+bytes(51993)+stock+b'tail'

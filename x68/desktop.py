@@ -9,7 +9,7 @@ from .protocol import X68Client
 from .settings import SettingsClient, HID_KEYS, MODIFIERS, MEDIA_KEYS, PHYSICAL_KEY_INDICES, compile_macro, macro_text
 from .battery import query_battery, BatteryHistory
 from .battery_health import ASSUMPTION, ChargeTrend, estimate
-from .firmware import LIVE_CLOCK_CRC, LIVE_CLOCK_CRCS, BATTERY_DIAGNOSTIC_CRC, BATTERY_DIAGNOSTIC_CRCS, CLOCK_FORMAT_CRC, CLOCK_FORMAT_CRCS, DEVICE_STATUS_CRC, STATUS_BADGE_CRC
+from .firmware import LIVE_CLOCK_CRC, LIVE_CLOCK_CRCS, BATTERY_DIAGNOSTIC_CRC, BATTERY_DIAGNOSTIC_CRCS, CLOCK_FORMAT_CRC, CLOCK_FORMAT_CRCS, DEVICE_STATUS_CRC, STATUS_BADGE_CRC, RETRO_BADGE_CRC
 from .media import convert_media, upload_media, set_screen
 from . import autostart, firmware_source
 from PIL import Image, ImageTk, ImageOps
@@ -445,7 +445,7 @@ class Studio:
   try:self.knowledge=(ASSETS/'docs/AI-KNOWLEDGE.md').read_text(encoding='utf-8')
   except OSError:self.knowledge='Knowledge file missing. Use the complete application folder.'
   text.insert('1.0',self.knowledge);text.configure(state='disabled')
- def knowledge_record(self):return {'application':'VGN X68 Custom Firmware','version':'0.9.1','custom_crc':STATUS_BADGE_CRC,'format':'Markdown','context':self.knowledge,'unknowns':['Battery current and charge control (voltage is an estimate via an inferred 1:2 divider)','Early SUBOR splash storage','Physical macOS validation','Custom-media physical validation pending']}
+ def knowledge_record(self):return {'application':'VGN X68 Custom Firmware','version':'0.9.2','custom_crc':RETRO_BADGE_CRC,'format':'Markdown','context':self.knowledge,'unknowns':['Battery current and charge control (voltage is an estimate via an inferred 1:2 divider)','Early SUBOR splash storage','Physical macOS validation','Custom-media physical validation pending']}
  def copy_knowledge(self):self.root.clipboard_clear();self.root.clipboard_append(self.knowledge);self.status.set('AI context copied to clipboard.')
  def export_knowledge(self):
   path=filedialog.asksaveasfilename(parent=self.root,initialfile='X68-AI-KNOWLEDGE.md',defaultextension='.md',filetypes=[('Markdown','*.md')])
@@ -508,7 +508,7 @@ class Studio:
   except (OSError,ValueError):preferences={}
   WORK.mkdir(parents=True,exist_ok=True);(WORK/'preferences.json').write_text(json.dumps({**preferences,**values}),encoding='utf-8')
  def show_version(self,result):
-  self.version=result;self.next_clock_sync=0;crc=result['reported_crc'];known={'14961BE6':'Original V0113','EF331DCE':'Lavender Quest 0.4.0','4CB077DE':'Lavender Quest 0.4.1','FC2EBCFE':'Lavender Quest 0.4.2','3C866A9B':'Lavender Quest 0.5.0',LIVE_CLOCK_CRC:'Lavender Quest 0.5.1',BATTERY_DIAGNOSTIC_CRC:'Lavender Quest 0.6.0',CLOCK_FORMAT_CRC:'Lavender Quest 0.8.0',DEVICE_STATUS_CRC:'Lavender Quest 0.9.0',STATUS_BADGE_CRC:'Lavender Quest 0.9.1'}
+  self.version=result;self.next_clock_sync=0;crc=result['reported_crc'];known={'14961BE6':'Original V0113','EF331DCE':'Lavender Quest 0.4.0','4CB077DE':'Lavender Quest 0.4.1','FC2EBCFE':'Lavender Quest 0.4.2','3C866A9B':'Lavender Quest 0.5.0',LIVE_CLOCK_CRC:'Lavender Quest 0.5.1',BATTERY_DIAGNOSTIC_CRC:'Lavender Quest 0.6.0',CLOCK_FORMAT_CRC:'Lavender Quest 0.8.0',DEVICE_STATUS_CRC:'Lavender Quest 0.9.0',STATUS_BADGE_CRC:'Lavender Quest 0.9.1',RETRO_BADGE_CRC:'Lavender Quest 0.9.2'}
   if self.inventory and self.inventory.get('transport')=='wireless':known={}
   self.installed.set('Installed: '+known.get(crc,'Unrecognized build')+'  /  CRC '+crc if known else 'Installed build: not reported over 2.4 GHz  /  receiver CRC '+crc)
   self.status.set('Version read complete / '+known.get(crc,'Unknown build')+' / CRC '+crc)
@@ -723,7 +723,7 @@ class Studio:
  def save_json(self,data,name):
   path=filedialog.asksaveasfilename(parent=self.root,initialfile=name,defaultextension='.json',filetypes=[('JSON','*.json')])
   if path:Path(path).write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8');self.status.set('File saved.')
- def report(self):return {'app':'VGN X68 Custom Firmware 0.9.1','inventory':self.inventory,'version':self.version,'settings':self.settings,'packets':self.settings_client.trace,'battery':self.history.report(),'logs':self.logs}
+ def report(self):return {'app':'VGN X68 Custom Firmware 0.9.2','inventory':self.inventory,'version':self.version,'settings':self.settings,'packets':self.settings_client.trace,'battery':self.history.report(),'logs':self.logs}
  def details(self):
   self.raw.configure(state='normal');self.raw.delete('1.0','end');self.raw.insert('1.0',json.dumps(self.report(),ensure_ascii=False,indent=2));self.raw.configure(state='disabled')
   self.log_text.configure(state='normal');self.log_text.delete('1.0','end');self.log_text.insert('1.0',json.dumps(self.logs,ensure_ascii=False,indent=2));self.log_text.configure(state='disabled')

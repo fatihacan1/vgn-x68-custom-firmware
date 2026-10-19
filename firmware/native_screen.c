@@ -163,13 +163,12 @@ void render(void) {
    if(apple[y]&(1024>>x))pixel(4+x,3+y,0xf7bf);
  }else{
   for(int y=0;y<9;y++)for(int x=0;x<9;x++)if(x!=4 && y!=4){
-   unsigned color=y<4?(x<4?0x55ff:0x7f7b):(x<4?0x3598:0x4e9f);
+   unsigned color=y<4?(x<4?0xed3d:0xb79a):(x<4?0xacdd:0xf691);
    pixel(5+x,5+y,color);
   }
  }
- /* Recessed mode chip, with a short coloured rail rather than raw status text. */
+ /* Recessed mode chip. */
  label(mac?"MAC":"WIN",86,6,mac?0xf7bf:0xb79b);
- for(int y=6;y<13;y++)pixel(78,y,mac?0xd65f:0x7f7b);
  /* Distinct lock silhouettes: a closed gold shackle or a visibly swung-open
   * mint shackle. The keyhole and highlight remain legible at 160 x 96. */
  unsigned body=locked?0xf6b1:0xb79b,shine=locked?0xff7b:0xdffd;

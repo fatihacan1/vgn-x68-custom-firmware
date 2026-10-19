@@ -347,3 +347,12 @@ physical readings must be recorded separately; do not infer them from emulation.
   RV32/host framebuffers match for all four states and live transitions.
 - CRC C21E2168; firmware SHA256 12b115ab89d0bbca4538108100794e22648385984f73ddc465e0580b1aca75bf.
   Renderer 4338 bytes, SHA256 16cf7f35323a0722c5edbf9d8e105c5e36f9ac702e105f94f357eea726b9c0bb.
+
+
+## 0.9.2: original four-colour Windows logo
+
+- Removed the decorative vertical rail before WIN/MAC.
+- Restored the original pink, mint, lavender and gold Windows tile palette.
+  Apple and open/closed lock graphics retain their existing design.
+- CRC 5B2F5C6D; firmware SHA256 bb900b313f2a3ec2d695e46dee33e5ba462c2fc9dd6829f9bde6a0864c1bb755.
+  Renderer SHA256 4e8c23890ccc3166eb8396dc7e8afb679ecf78b527fa506948eb09236b150775, 4338 bytes.
