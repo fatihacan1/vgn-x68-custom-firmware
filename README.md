@@ -98,6 +98,11 @@ npm run dev
 
 macOS can run the app from source, but USB communication has not been tested on a Mac.
 
+For macOS packaging, run `npm run build:macos` with PyInstaller and the runtime dependencies installed in `.venv-macos`.
+For release builds, set `X68_CODESIGN_IDENTITY` to your Developer ID Application identity and reuse the same identity across updates.
+Without it, the bundle receives an ad-hoc signature tied to its contents, so updating the app can invalidate its Input Monitoring permission.
+Signing does not notarize the app or grant Input Monitoring automatically.
+
 ## Project layout
 
 ```

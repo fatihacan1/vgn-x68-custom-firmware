@@ -429,14 +429,27 @@ class SettingsClient:
             raise ProtocolError('Live clock sync requires the reviewed Lavender Quest 0.5.1 firmware.')
         if hour_format not in (12,24):
             raise ProtocolError('Clock format must be 12 or 24 hours.')
-        if hour_format == 12 and firmware_crc not in CLOCK_FORMAT_CRCS:
-            raise ProtocolError('12-hour display requires Lavender Quest 0.8.0 or newer verified over wired USB.')
+        if hour_format == 12 and not receiver and firmware_crc not in CLOCK_FORMAT_CRCS:
+            raise ProtocolError('12-hour display requires Lavender Quest 0.8.0 or newer.')
         moment=moment or datetime.now().astimezone()
         fields=bytes((n//10)*16+n%10 for n in [moment.second,moment.minute,moment.hour,moment.isoweekday(),moment.day,moment.month])
         if hour_format == 12:fields=fields[:2]+bytes([fields[2]|128])+fields[3:]
         with self._device() as device:
-            self._exchange(device,24,data=fields)
-        return {'local_time':moment.isoformat(),'clock_fields_bcd':fields.hex(' '),'persistent_flash_write':False}
+            try:
+                self._exchange(device,24,data=fields)
+                if receiver and hour_format == 12:
+                    # The receiver CRC identifies the dongle, not the keyboard.
+                    # Old clock handlers reject bit 7 before changing RAM. Verify
+                    # the keyboard actually retained the format instead of trusting
+                    # a receiver acknowledgement alone. Never write parameter flash.
+                    actual = self._read(device,5,64)
+                    if actual[0x23:0x29] != fields:
+                        raise ProtocolError('The keyboard did not retain the requested AM/PM format.')
+            except ProtocolError as error:
+                if receiver and hour_format == 12:
+                    raise ProtocolError('AM/PM could not be verified over 2.4 GHz. The keyboard needs Lavender Quest 0.8.0 or newer; connect wired USB to check its firmware. '+str(error)) from error
+                raise
+        return {'local_time':moment.isoformat(),'clock_fields_bcd':fields.hex(' '),'persistent_flash_write':False,'hour_format':hour_format}
 
     def _set_mapping(self, device, original, desired):
         if len(original) != 384 or len(desired) != 384:

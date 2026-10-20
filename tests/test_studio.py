@@ -7,6 +7,29 @@ from x68.battery import decode_battery
 from x68.settings import PHYSICAL_KEY_INDICES, encode_key, keymap_entries, compile_macro
 
 class StudioTests(unittest.TestCase):
+ def test_receiver_ampm_choice_submits_instead_of_silently_blocking(self):
+  a=self.app;a.inventory={'transport':'wireless'};a.version={'reported_crc':'receiver-crc'}
+  a.clock_format.set('12-hour (AM/PM)');a.submit=Mock();a.settings_client.sync_clock_live=Mock()
+  a.sync_clock();operation=a.submit.call_args.args[1];operation()
+  a.settings_client.sync_clock_live.assert_called_once_with('receiver-crc',receiver=True,hour_format=12)
+  self.assertIn('12-hour',a.clock_note.get())
+ def test_manual_sync_without_connection_explains_in_status_and_clock_panel(self):
+  a=self.app;a.submit=Mock();a.sync_clock()
+  a.submit.assert_not_called();self.assertIn('Connect',a.status.get());self.assertEqual(a.status.get(),a.clock_note.get())
+ def test_mac_startup_control_is_available_and_platform_named(self):
+  import sys
+  if sys.platform!='darwin':self.skipTest('macOS label')
+  self.assertIn('Mac',self.app.startup_control['text']);self.assertNotIn('disabled',self.app.startup_control.state())
+ def test_screen_long_status_wraps_and_scrolls_at_minimum_window_size(self):
+  from types import SimpleNamespace
+  a=self.app;self.root.deiconify();self.root.geometry('1180x820');a.show('Screen')
+  a.clock_note.set('AM/PM could not be verified over 2.4 GHz. '*12);self.root.update_idletasks()
+  label=a.clock_note_label
+  self.assertLessEqual(int(label['wraplength']),label.master.winfo_width()-28)
+  self.assertLess(label.winfo_rootx()+label.winfo_width(),self.root.winfo_rootx()+self.root.winfo_width())
+  self.assertLess(a.screen_scroll.yview()[1],1.0)
+  a.scroll_screen(SimpleNamespace(widget=label,delta=-120,num=0));self.assertGreater(a.screen_scroll.yview()[0],0)
+  a.screen_scroll.yview_moveto(1);self.root.update_idletasks();self.assertAlmostEqual(a.screen_scroll.yview()[1],1.0)
  def test_clock_display_at_midnight_noon_and_evening(self):
   from datetime import datetime
   a=self.app

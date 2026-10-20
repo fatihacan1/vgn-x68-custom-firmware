@@ -112,7 +112,8 @@ class Studio:
   outer,msg=window(shell,pad=10);outer.pack(side='bottom',fill='x',pady=(10,0))
   self.status=tk.StringVar(value='Connect the X68 over USB or its 2.4 GHz receiver.');self.typed=tk.StringVar(value='');self.typing=0
   self.connect_button=PixelButton(msg,'Connect',self.refresh);self.connect_button.pack(side='right')
-  tk.Label(msg,textvariable=self.typed,font=BODY,bg=BG,fg=INK,anchor='w',justify='left',wraplength=760).pack(side='left',fill='x',expand=True)
+  status_label=tk.Label(msg,textvariable=self.typed,font=BODY,bg=BG,fg=INK,anchor='w',justify='left',wraplength=760);status_label.pack(side='left',fill='x',expand=True)
+  status_label.bind('<Configure>',lambda e:status_label.configure(wraplength=max(120,e.width)))
   self.status.trace_add('write',lambda *args:self.type_status())
   outer,self.holder=window(shell,pad=16);outer.pack(fill='both',expand=True,pady=(10,0))
   self.pages={name:ttk.Frame(self.holder) for name in PAGES}
@@ -349,7 +350,17 @@ class Studio:
   self.status.set('File inspected locally. Nothing was uploaded.')
 
  def _screen(self):
-  p=self.pages['Screen'];left=pixel.panel(p,'LCD  160 x 96');left.pack(side='left',fill='y')
+  page=self.pages['Screen']
+  self.screen_scroll=tk.Canvas(page,bg=BG,highlightthickness=0,width=1,height=1,yscrollincrement=16)
+  scrollbar=ttk.Scrollbar(page,orient='vertical',command=self.screen_scroll.yview);scrollbar.pack(side='right',fill='y',padx=(8,0))
+  self.screen_scroll.configure(yscrollcommand=scrollbar.set);self.screen_scroll.pack(side='left',fill='both',expand=True)
+  p=ttk.Frame(self.screen_scroll);self.screen_content=p
+  content=self.screen_scroll.create_window(0,0,window=p,anchor='nw')
+  self.screen_scroll.bind('<Configure>',lambda e:self.screen_scroll.itemconfigure(content,width=e.width))
+  p.bind('<Configure>',lambda e:self.screen_scroll.configure(scrollregion=self.screen_scroll.bbox('all')))
+  self.root.bind('<MouseWheel>',self.scroll_screen,add='+')
+  self.root.bind('<Button-4>',self.scroll_screen,add='+');self.root.bind('<Button-5>',self.scroll_screen,add='+')
+  left=pixel.panel(p,'LCD  160 x 96');left.pack(side='left',fill='y')
   self.screen_preview=tk.Label(left,bg=PANEL,bd=0);self.screen_preview.pack(anchor='w')
   preview=ASSETS/'assets/pixel/lcd-preview.png'
   if preview.exists():
@@ -364,22 +375,35 @@ class Studio:
   self.media_progress=ttk.Progressbar(left,maximum=100);self.media_progress.pack(fill='x')
   right=ttk.Frame(p);right.pack(side='left',fill='both',expand=True,padx=(12,0))
   scene=pixel.panel(right,'SCENE');scene.pack(fill='x')
-  tk.Label(scene,text='Upload replaces the custom animation bank. Switch back to the clock scene at any time.',font=BODY,bg=PANEL,fg=MUTED,wraplength=380,justify='left').pack(anchor='w',pady=(0,10))
+  scene_note=tk.Label(scene,text='Upload replaces the custom animation bank. Switch back to the clock scene at any time.',font=BODY,bg=PANEL,fg=MUTED,wraplength=340,justify='left');scene_note.pack(fill='x',pady=(0,10))
+  scene.bind('<Configure>',lambda e:scene_note.configure(wraplength=max(120,e.width-32)))
   f=tk.Frame(scene,bg=PANEL);f.pack(anchor='w');self.button(f,'Lavender desktop',lambda:self.change_screen(0))
   clock=pixel.panel(right,'CLOCK');clock.pack(fill='both',expand=True,pady=(12,0))
-  ttk.Checkbutton(clock,text='Sync computer time automatically',variable=self.auto_clock,command=self.clock_preference,style='Field.TCheckbutton').pack(anchor='w',pady=4)
+  ttk.Checkbutton(clock,text='Sync time automatically',variable=self.auto_clock,command=self.clock_preference,style='Field.TCheckbutton').pack(anchor='w',pady=4)
   f=tk.Frame(clock,bg=PANEL);f.pack(anchor='w',pady=6);tk.Label(f,text='Every',font=BODY,bg=PANEL,fg=INK).pack(side='left')
   interval=ttk.Combobox(f,textvariable=self.clock_interval,values=['1','2','5','10','15','30','60'],state='readonly',width=4);interval.pack(side='left',padx=10);interval.bind('<<ComboboxSelected>>',lambda event:self.clock_preference())
   tk.Label(f,text='minutes',font=BODY,bg=PANEL,fg=INK).pack(side='left')
   f=tk.Frame(clock,bg=PANEL);f.pack(anchor='w',pady=6);tk.Label(f,text='Time format',font=BODY,bg=PANEL,fg=INK).pack(side='left')
-  self.clock_format_choice=ttk.Combobox(f,textvariable=self.clock_format,values=['24-hour','12-hour (AM/PM)'],state='readonly',width=18);self.clock_format_choice.pack(side='left',padx=10)
+  self.clock_format_choice=ttk.Combobox(f,textvariable=self.clock_format,values=['24-hour','12-hour (AM/PM)'],state='readonly',width=16);self.clock_format_choice.pack(side='left',padx=10)
   self.clock_format_choice.bind('<<ComboboxSelected>>',lambda event:self.clock_format_preference())
-  tk.Label(clock,text='12-hour display requires Lavender Quest 0.8.0 and wired USB. Press Sync time now to apply.',font=BODY,bg=PANEL,fg=MUTED,wraplength=380,justify='left').pack(anchor='w')
-  startup=ttk.Checkbutton(clock,text='Launch when I sign in to Windows',variable=self.start_on_login,command=self.startup_preference,style='Field.TCheckbutton');startup.pack(anchor='w',pady=4)
-  if sys.platform!='win32':startup.configure(state='disabled')
-  tk.Label(clock,textvariable=self.clock_note,font=BODY,bg=PANEL,fg=MINT,wraplength=380,justify='left').pack(anchor='w',pady=8)
-  f=tk.Frame(clock,bg=PANEL);f.pack(anchor='w');self.button(f,'Sync time now',self.sync_clock)
-  tk.Label(clock,text='Live sync changes RAM only. After a full power loss, open the app again.',font=BODY,bg=PANEL,fg=MUTED,wraplength=380,justify='left').pack(anchor='w',pady=(10,0))
+  self.startup_control=ttk.Checkbutton(clock,text='Open at login on Mac' if sys.platform=='darwin' else 'Launch when I sign in to Windows',variable=self.start_on_login,command=self.startup_preference,style='Field.TCheckbutton');self.startup_control.pack(anchor='w',pady=4)
+  if sys.platform not in ('win32','darwin'):self.startup_control.configure(state='disabled')
+  f=tk.Frame(clock,bg=PANEL);f.pack(anchor='w',pady=(8,0));self.clock_sync_button=self.button(f,'Sync time now',self.sync_clock)
+  self.clock_note_label=tk.Label(clock,textvariable=self.clock_note,font=BODY,bg=PANEL,fg=MINT,wraplength=340,justify='left',anchor='w');self.clock_note_label.pack(fill='x',pady=8)
+  help_note=tk.Label(clock,text='AM/PM needs Lavender Quest 0.8.0 or newer. On 2.4 GHz, the format is checked after syncing; use wired USB if it cannot be verified.',font=BODY,bg=PANEL,fg=MUTED,wraplength=340,justify='left',anchor='w');help_note.pack(fill='x')
+  ram_note=tk.Label(clock,text='Time and format stay in RAM. After a full power loss, reopen the app to sync again.',font=BODY,bg=PANEL,fg=MUTED,wraplength=340,justify='left',anchor='w');ram_note.pack(fill='x',pady=(10,0))
+  clock.bind('<Configure>',lambda e:[label.configure(wraplength=max(120,e.width-32)) for label in (self.clock_note_label,help_note,ram_note)])
+
+ def scroll_screen(self,event):
+  if self.page_name!='Screen':return
+  widget=event.widget
+  while widget is not None and widget not in (self.screen_content,self.screen_scroll):
+   if isinstance(widget,(ttk.Combobox,tk.Text,tk.Listbox)):return
+   widget=getattr(widget,'master',None)
+  if widget is None or self.screen_scroll.yview()==(0.0,1.0):return
+  number=getattr(event,'num',None);delta=getattr(event,'delta',0)
+  steps=(-1 if number==4 else 1) if number in (4,5) else (-int(delta) if sys.platform=='darwin' else -int(delta/120))
+  if steps:self.screen_scroll.yview_scroll(steps,'units');return 'break'
 
  def choose_media(self):
   if self.busy:return
@@ -419,21 +443,31 @@ class Studio:
   self.clock_note.set('Time format saved. Press Sync time now to apply to the keyboard.')
  def startup_preference(self):
   try:
-   autostart.configure(self.start_on_login.get());self.status.set('Windows startup enabled.' if self.start_on_login.get() else 'Windows startup disabled.')
+   autostart.configure(self.start_on_login.get());self.status.set(('The app will open at your next Mac login.' if sys.platform=='darwin' else 'Windows startup enabled.') if self.start_on_login.get() else 'Open at login disabled.')
   except OSError as error:
    self.start_on_login.set(autostart.enabled());self.status.set('Startup setting failed: '+str(error))
- def sync_clock(self):
+ def sync_clock(self,manual=True):
+  def explain(message):
+   self.clock_note.set(message)
+   if manual:self.status.set(message)
+  if not self.inventory or not self.version:
+   self.next_clock_sync=time.monotonic()+60;return explain('Connect the keyboard and wait for its settings to load before syncing.')
   wireless=bool(self.inventory and self.inventory.get('transport')=='wireless')
   if not wireless and (not self.version or self.version.get('reported_crc') not in LIVE_CLOCK_CRCS):
-   self.next_clock_sync=time.monotonic()+60;return self.clock_note.set('Live sync requires Lavender Quest 0.5.1 or newer. Install it in Firmware.')
-  if self.busy:return
+   self.next_clock_sync=time.monotonic()+60;return explain('Live sync requires Lavender Quest 0.5.1 or newer. Install it in Firmware.')
+  if self.busy:return explain('Another operation is running. Try Sync time now when it finishes.')
   hour_format=12 if self.clock_format.get()=='12-hour (AM/PM)' else 24
-  if hour_format==12 and (wireless or self.version['reported_crc'] not in CLOCK_FORMAT_CRCS):
-   self.next_clock_sync=float('inf');return self.clock_note.set('12-hour display needs Lavender Quest 0.8.0. Install it in Firmware and connect with wired USB.')
+  if hour_format==12 and not wireless and self.version['reported_crc'] not in CLOCK_FORMAT_CRCS:
+   self.next_clock_sync=float('inf');return explain('AM/PM needs Lavender Quest 0.8.0 or newer. Check the installed build in Firmware.')
   crc=self.version['reported_crc'];self.next_clock_sync=time.monotonic()+60
+  self.clock_note.set('Applying '+('12-hour (AM/PM)' if hour_format==12 else '24-hour')+' time to the keyboard...')
   self.submit('Syncing keyboard clock',lambda:self.settings_client.sync_clock_live(crc,receiver=wireless,hour_format=hour_format),self.clock_synced)
  def clock_synced(self,result):
-  self.next_clock_sync=time.monotonic()+int(self.clock_interval.get())*60;self.clock_note.set('Synced from computer: '+result['local_time'][:19].replace('T',' ')+'  /  RAM only');self.status.set('Keyboard date and time synchronized.')
+  self.next_clock_sync=time.monotonic()+int(self.clock_interval.get())*60
+  moment=datetime.fromisoformat(result['local_time']);hour_format=result.get('hour_format',24)
+  rendered=moment.strftime('%I:%M:%S %p') if hour_format==12 else moment.strftime('%H:%M:%S')
+  message='Keyboard synced: '+rendered+' / '+('12-hour (AM/PM)' if hour_format==12 else '24-hour')
+  self.clock_note.set(message);self.status.set(message)
 
  def _knowledge(self):
   p=self.pages['Knowledge'];self.label(p,'FACTS YOU CAN TAKE WITH YOU',font=HEAD)
@@ -755,7 +789,7 @@ class Studio:
     self.status.set(error if name=='Finding X68' and 'Input Monitoring' in error else 'Operation failed. Check the connection; details are in Advanced.')
     if name=='Finding X68':self.inventory=None;self.device.set('[ ]  X68 NOT CONNECTED');self.usb_mode.set('Not connected');self.connect_button.configure(text='Connect',state='normal');self.next_reconnect=time.monotonic()+5
     if name=='Reading battery':self.history.record(error=error);self.next_battery=time.monotonic()+5
-    if name=='Syncing keyboard clock':self.next_clock_sync=time.monotonic()+60;self.clock_note.set('Sync failed; reconnecting to verify the device.');self.inventory=None;self.version=None;self.next_reconnect=time.monotonic()+5
+    if name=='Syncing keyboard clock':self.next_clock_sync=time.monotonic()+60;self.clock_note.set('Sync failed: '+error);self.status.set('Sync failed: '+error)
     if self.flashing:self.flashing=False;self.install_button.configure(state='normal');self.firmware_note.set('Update stopped. Check Advanced logs before retrying; no automatic retry was sent.');self.media_note.set('Transfer stopped. Check Advanced logs. No automatic retry was sent.')
    elif done:
     self.status.set(name+' complete.');done(result)
@@ -767,7 +801,7 @@ class Studio:
    self.details()
    if self.smoke:self.root.after(200,self.smoke_done)
   if not self.smoke and not self.inventory and not self.busy and not self.flashing and time.monotonic()>=self.next_reconnect:self.refresh()
-  if not self.smoke and self.auto_clock.get() and self.inventory and self.settings and self.version and not self.busy and not self.flashing and time.monotonic()>=self.next_clock_sync:self.sync_clock()
+  if not self.smoke and self.auto_clock.get() and self.inventory and self.settings and self.version and not self.busy and not self.flashing and time.monotonic()>=self.next_clock_sync:self.sync_clock(manual=False)
   if not self.smoke and self.needs_battery_read and self.inventory and self.settings and self.version and not self.busy and not self.flashing:
    self.needs_battery_read=False;self.read_battery()
   if self.monitoring and self.inventory and self.settings and self.version and not self.busy and not self.flashing and time.monotonic()>=self.next_battery:self.read_battery()
