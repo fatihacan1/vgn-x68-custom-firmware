@@ -30,7 +30,7 @@ class LcdPreviewTests(unittest.TestCase):
             if source:
                 self.assertEqual(different, 0)  # with the official payload cached the preview is pixel-exact
             else:
-                self.assertLessEqual(different, 50)  # 50 background pixels equal stock and are filled from a neighbour
+                self.assertLessEqual(different, 100)  # 100 background bytes equal stock; those pixels come from a neighbour
 
     def test_builds_draw_their_own_header_and_clock(self):
         moment = datetime(2026, 11, 10, 13, 5, 30)
