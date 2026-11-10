@@ -26,6 +26,8 @@ PAGES=['Home','Lighting','Keymap','Macros','Screen','Battery','Firmware','Knowle
 # Builds are produced locally from the official payload; see firmware_source.
 BUILDS=list(firmware_source.BUILDS)
 CACHE=WORK/'firmware-cache'
+# Firmware the installer accepts as the starting point (device-reported CRC -> build name).
+KNOWN_BUILDS={'14961BE6':'Original V0113','EF331DCE':'Lavender Quest 0.4.0','4CB077DE':'Lavender Quest 0.4.1','FC2EBCFE':'Lavender Quest 0.4.2','3C866A9B':'Lavender Quest 0.5.0',LIVE_CLOCK_CRC:'Lavender Quest 0.5.1',BATTERY_DIAGNOSTIC_CRC:'Lavender Quest 0.6.0',CLOCK_FORMAT_CRC:'Lavender Quest 0.8.0',DEVICE_STATUS_CRC:'Lavender Quest 0.9.0',STATUS_BADGE_CRC:'Lavender Quest 0.9.1',RETRO_BADGE_CRC:'Lavender Quest 0.9.2'}
 EFFECTS=['Wave','Colour cloud','Vortex','Spectrum','Breathing','Solid','Reactive','Ripple','Trail','Stars','Flowers','Scroll','Wings','Build up','Rain','Scan','Spread','Fast wave','Custom table','Off']
 ROWS=[
  [('Esc','ESC',1),*[(str(n),str(n),1) for n in range(1,10)],('0','0',1),('-','-',1),('=','=',1),('Back','BACKSPACE',2)],
@@ -558,10 +560,11 @@ class Studio:
   except (OSError,ValueError):preferences={}
   WORK.mkdir(parents=True,exist_ok=True);(WORK/'preferences.json').write_text(json.dumps({**preferences,**values}),encoding='utf-8')
  def show_version(self,result):
-  self.version=result;self.next_clock_sync=0;crc=result['reported_crc'];known={'14961BE6':'Original V0113','EF331DCE':'Lavender Quest 0.4.0','4CB077DE':'Lavender Quest 0.4.1','FC2EBCFE':'Lavender Quest 0.4.2','3C866A9B':'Lavender Quest 0.5.0',LIVE_CLOCK_CRC:'Lavender Quest 0.5.1',BATTERY_DIAGNOSTIC_CRC:'Lavender Quest 0.6.0',CLOCK_FORMAT_CRC:'Lavender Quest 0.8.0',DEVICE_STATUS_CRC:'Lavender Quest 0.9.0',STATUS_BADGE_CRC:'Lavender Quest 0.9.1',RETRO_BADGE_CRC:'Lavender Quest 0.9.2'}
+  self.version=result;self.next_clock_sync=0;crc=result['reported_crc'];known=dict(KNOWN_BUILDS)
   if self.inventory and self.inventory.get('transport')=='wireless':known={}
   self.installed.set(t('Installed: {build}  /  CRC {crc}').format(build=known.get(crc,t('Unrecognized build')),crc=crc) if known else t('Installed build: not reported over 2.4 GHz  /  receiver CRC {crc}').format(crc=crc))
   self.status.set(t('Version read complete / {build} / CRC {crc}').format(build=known.get(crc,t('Unknown build')),crc=crc))
+  if known and crc not in known:self.firmware_note.set(t('This keyboard runs firmware this app does not recognise (CRC {crc}). Installing firmware is blocked to protect it. Lighting, keys and macros still work.').format(crc=crc))
  def choose_color(self):
   value=colorchooser.askcolor(color=self.color.get(),parent=self.root)[1]
   if value:self.color.set(value)
@@ -734,6 +737,11 @@ class Studio:
   if unreviewed and not self.allow_unreviewed.get():return self.status.set(t('This binary is unreviewed. Enable the explicit unreviewed-file option before installing.'))
   if not self.inventory:return self.status.set(t('Connect the X68 with a USB cable before installing firmware.'))
   if self.inventory.get('transport')=='wireless':return self.status.set(t('Firmware can only be installed over a USB cable. Set the keyboard switch to wired and plug in the cable.'))
+  if not self.version:return self.status.set(t('Check the installed version first.'))
+  if self.version.get('reported_crc') not in KNOWN_BUILDS:
+   message=t('This keyboard runs firmware this app does not recognise (CRC {crc}). Installing firmware is blocked to protect it. Lighting, keys and macros still work.').format(crc=self.version.get('reported_crc'))
+   if not self.smoke:messagebox.showwarning(t('Unrecognised firmware'),message+'\n\n'+t('The builds here were made only for VGN\'s original V0113 firmware. Writing them over a different version could leave the keyboard unusable.'),parent=self.root)
+   return self.status.set(message)
   danger=[t('This is YOUR UNREVIEWED CODE. Structural checks do not establish hardware compatibility; recovery may require a programmer.')] if unreviewed else []
   if safety.on_battery_power():danger.append(t('This computer is running on battery. Plug in the charger before you continue.'))
   intro=t('Install {name}?').format(name=name)+'\n\n'+t('Firmware is the keyboard\'s own internal software; installing replaces it and takes a few minutes.')+t('\n\nThe official V0113 firmware is downloaded from VGN once if it is not cached yet.\nKeep USB connected in wired mode until verification completes.\nSettings are backed up before writing.')

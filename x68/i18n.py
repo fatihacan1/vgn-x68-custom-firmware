@@ -389,6 +389,12 @@ TR = {
     'This lets you install a firmware file that nobody has checked. A wrong or broken file can make the keyboard stop working for good, and fixing it needs a hardware programmer.\n\nOnly continue if you know exactly what this file is. Turn this option on?':
         'Bu seçenek, kimsenin kontrol etmediği bir firmware dosyasını yüklemenize izin verir. Yanlış veya bozuk bir dosya klavyeyi kalıcı olarak bozabilir; düzeltmek için donanım programlayıcısı gerekir.\n\nYalnızca bu dosyanın ne olduğunu kesin olarak biliyorsanız devam edin. Bu seçenek açılsın mı?',
 
+    'This keyboard runs firmware this app does not recognise (CRC {crc}). Installing firmware is blocked to protect it. Lighting, keys and macros still work.':
+        'Bu klavyede uygulamanın tanımadığı bir firmware var (CRC {crc}). Klavyeyi korumak için firmware yükleme engellendi. Aydınlatma, tuş atama ve makrolar yine çalışır.',
+    'Unrecognised firmware': 'Tanınmayan firmware',
+    "The builds here were made only for VGN's original V0113 firmware. Writing them over a different version could leave the keyboard unusable.":
+        'Buradaki sürümler yalnızca VGN\'in orijinal V0113 firmware\'i için hazırlandı. Farklı bir sürümün üzerine yazmak klavyeyi kullanılamaz hale getirebilir.',
+
     # Background operations (shown as "<name>..." and "<name> complete.")
     '{operation} complete.': '{operation} tamamlandı.',
     '{operation} is still running. Please wait.': '{operation} hâlâ sürüyor. Lütfen bekleyin.',

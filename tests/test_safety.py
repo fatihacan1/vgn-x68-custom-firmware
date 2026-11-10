@@ -50,11 +50,28 @@ class SafetyGuardTests(unittest.TestCase):
         self.assertIn('USB cable', a.status.get())
 
     def test_install_stops_when_the_checklist_is_cancelled(self):
-        a = self.app; a.confirm_checklist = Mock(return_value=False); a.inventory = {'transport': 'usb'}
+        a = self.app; a.confirm_checklist = Mock(return_value=False); a.inventory = {'transport': 'usb'}; a.version = {'reported_crc': '14961BE6'}
         a.install()
         a.confirm_checklist.assert_called_once()
         self.assertEqual(len(a.confirm_checklist.call_args.args[2]), 4)
         a.submit.assert_not_called(); self.assertFalse(a.flashing)
+
+    def test_install_is_blocked_on_unrecognised_keyboard_firmware(self):
+        a = self.app; a.confirm_checklist = Mock(return_value=True); a.inventory = {'transport': 'usb'}
+        a.version = {'reported_crc': '475FA496'}
+        a.install()
+        a.confirm_checklist.assert_not_called(); a.submit.assert_not_called()
+        self.assertIn('475FA496', a.status.get()); self.assertIn('blocked', a.status.get())
+
+    def test_install_needs_the_installed_version_first(self):
+        a = self.app; a.confirm_checklist = Mock(return_value=True); a.inventory = {'transport': 'usb'}; a.version = None
+        a.install()
+        a.confirm_checklist.assert_not_called(); a.submit.assert_not_called()
+
+    def test_unrecognised_version_explains_on_the_firmware_page(self):
+        a = self.app; a.inventory = {'transport': 'usb'}
+        a.show_version({'reported_crc': '475FA496'})
+        self.assertIn('blocked', a.firmware_note.get())
 
     def test_checklist_confirm_stays_disabled_until_every_box_is_ticked(self):
         a = self.app; seen = {}
