@@ -63,6 +63,15 @@ class SafetyGuardTests(unittest.TestCase):
         a.confirm_checklist.assert_not_called(); a.submit.assert_not_called()
         self.assertIn('475FA496', a.status.get()); self.assertIn('blocked', a.status.get())
 
+    def test_v0112_keyboard_is_told_to_update_to_v0113_first(self):
+        a = self.app; a.confirm_checklist = Mock(return_value=True)
+        a.inventory = {'transport': 'usb', 'usb_release_hex': '0112'}; a.version = {'reported_crc': '475FA496'}
+        a.install()
+        a.confirm_checklist.assert_not_called(); a.submit.assert_not_called()
+        self.assertIn('V0112', a.status.get()); self.assertIn('V0113', a.status.get())
+        a.show_version({'reported_crc': '475FA496'})
+        self.assertIn('V0112', a.firmware_note.get())
+
     def test_install_needs_the_installed_version_first(self):
         a = self.app; a.confirm_checklist = Mock(return_value=True); a.inventory = {'transport': 'usb'}; a.version = None
         a.install()
