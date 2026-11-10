@@ -13,7 +13,7 @@ from .firmware import LIVE_CLOCK_CRC, LIVE_CLOCK_CRCS, BATTERY_DIAGNOSTIC_CRC, B
 from .media import convert_media, upload_media, set_screen
 from . import autostart, firmware_source, safety
 from PIL import Image, ImageTk, ImageOps
-from . import pixel, i18n
+from . import pixel, i18n, effects
 from .i18n import t
 from .pixel import PixelButton, window, BODY, BIG_BODY, LABEL, HEAD, TITLE, HUGE
 
@@ -46,6 +46,8 @@ for r,row in enumerate(MAIN_ROWS):
 LAYOUT += [('Ins','INSERT',15.75,0,1),('Del','DELETE',15.75,1,1),
            ('PgUp','PAGEUP',16.75,0,1),('PgDn','PAGEDOWN',16.75,1,1)]
 LAYOUT += [('↑','UP',14.5,3,1),('←','LEFT',13.5,4,1),('↓','DOWN',14.5,4,1),('→','RIGHT',15.5,4,1)]
+# Key centres in key units for the lighting preview.
+PREVIEW_KEYS=[(key,column+size/2,row) for label,key,column,row,size in LAYOUT]
 
 class Studio:
  def __init__(self,root,smoke=False):
@@ -124,7 +126,9 @@ class Studio:
   status_label.bind('<Configure>',lambda e:status_label.configure(wraplength=max(120,e.width)))
   self.status.trace_add('write',lambda *args:self.type_status())
   outer,self.holder=window(shell,pad=16);outer.pack(fill='both',expand=True,pady=(10,0))
-  self.pages={name:ttk.Frame(self.holder) for name in PAGES}
+  self.page_frames={name:ttk.Frame(self.holder) for name in PAGES}
+  # Pages built around one expanding widget fill the window when they fit; the rest keep their natural height.
+  self.pages={name:self.scrollable(name,fill=name in ('Keymap','Macros','Knowledge','Advanced'))[1] for name in PAGES}
   self._lighting();self._mapping();self._macros();self._screen();self._battery();self._firmware();self._knowledge();self._advanced();self._home()
   icon=ASSETS/'assets/icon.png'
   if icon.exists():
@@ -165,8 +169,8 @@ class Studio:
   self.root.after(1000*(60-now.second) if now.second else 1000,self.tick_clock)
  def show(self,name):
   if self.flashing:return
-  for p in self.pages.values():p.pack_forget()
-  self.pages[name].pack(fill='both',expand=True);self.page_name=name;self.title.set(i18n.pixel_caps(i18n.upper(t(name))))
+  for p in self.page_frames.values():p.pack_forget()
+  self.page_frames[name].pack(fill='both',expand=True);self.root.after_idle(self.scrollers[name][2]);self.page_name=name;self.title.set(i18n.pixel_caps(i18n.upper(t(name))))
   descriptions={'Lighting':'Preview an effect, then send it to the keyboard.','Keymap':'Pick a key on the board and give it a new action.','Macros':'Shortcuts stored on the keyboard itself.','Battery':'Measure the pack and watch it charge.','Firmware':'Reviewed X68 builds, installed only when you say so.','Advanced':'Raw data, backups and the key tester.'}
   descriptions.update(Screen='Send an image or GIF to the 160x96 screen.',Knowledge='Verified facts and open questions, ready to copy.',Home='Plug in over USB. Nothing is written until you press Send.')
   self.subtitle.set(t(descriptions[name]));self.hover_nav(self.nav_hover)
@@ -203,9 +207,10 @@ class Studio:
   p=self.pages['Lighting'];self.rgb_canvas=self.board(p);self.rgb_canvas.bind('<Button-1>',self.paint_key)
   self.effect=tk.StringVar(value='Solid');self.brightness=tk.IntVar(value=4);self.speed=tk.IntVar(value=2);self.color=tk.StringVar(value='#b9a6ea');self.rainbow=tk.StringVar(value='Keep device flag')
   self.preview_mode=tk.StringVar(value='Effect preview')
+  self.effect_note=tk.StringVar();tk.Label(p,textvariable=self.effect_note,font=BODY,bg=BG,fg=MINT,anchor='w',justify='left',wraplength=880).pack(fill='x',pady=(6,0))
   body=ttk.Frame(p);body.pack(fill='x',pady=(10,0))
   fx=pixel.panel(body,t('EFFECT'));fx.pack(side='left',fill='y')
-  pixel.Choice(fx,self.effect,[(e,t(e)) for e in EFFECTS],columns=4,width=14).pack(anchor='w')
+  pixel.Choice(fx,self.effect,[(e,t(e)) for e in EFFECTS],columns=4,width=13).pack(anchor='w')
   opts=pixel.panel(body,t('LIGHT'),pad=6);opts.pack(side='left',fill='both',expand=True,padx=(12,0))
   def line(title):
    row=tk.Frame(opts,bg=PANEL);row.pack(fill='x',pady=3);tk.Label(row,text=t(title),font=LABEL,bg=PANEL,fg=MUTED,width=10,anchor='w').pack(side='left');return row
@@ -217,7 +222,30 @@ class Studio:
   actions=ttk.Frame(p);actions.pack(fill='x',pady=(12,0))
   self.lighting_send=self.button(actions,t('Send to keyboard'),self.apply_lighting,True);self.button(actions,t('Read from keyboard'),self.read_settings);self.button(actions,t('Export draft'),self.export_draft)
   self.preview_mode.trace_add('write',lambda *args:self.lighting_send.configure(state='normal' if self.preview_mode.get()=='Effect preview' else 'disabled'))
-  self.lighting_hint=tk.Label(p,text=t('The board is a preview. In Key draft, click keys to paint them; drafts stay on this computer.'),font=BODY,bg=BG,fg=MUTED,anchor='w');self.lighting_hint.pack(fill='x',pady=(10,0))
+  self.lighting_summary=tk.StringVar();tk.Label(p,textvariable=self.lighting_summary,font=BODY,bg=BG,fg=INK,anchor='w',justify='left',wraplength=880).pack(fill='x',pady=(10,0))
+  for var in (self.effect,self.brightness,self.speed,self.color,self.rainbow,self.preview_mode):var.trace_add('write',lambda *args:self.lighting_changed())
+  self.lighting_hint=tk.Label(p,text=t('The board is a preview. In Key draft, click keys to paint them; drafts stay on this computer.')+' '+t('The animation is an approximation; Send shows the real effect on the keyboard.'),wraplength=880,justify='left',font=BODY,bg=BG,fg=MUTED,anchor='w');self.lighting_hint.pack(fill='x',pady=(10,0))
+  self.lighting_changed()
+ def lighting_changed(self):
+  """Any light setting changed: refresh the description, the send summary and the preview at once."""
+  effect=self.effect.get()
+  self.effect_note.set(t(effect)+' — '+t(effects.DESCRIPTIONS.get(effect,'')))
+  self.lighting_summary.set(self.lighting_summary_text())
+  if self.page_name=='Lighting':self.draw_boards(time.monotonic(),only=('rgb',))
+ def lighting_summary_text(self):
+  if self.preview_mode.get()!='Effect preview':return t('Key draft is local only and is never sent to the keyboard.')
+  mode={'Keep device flag':t('Keep'),'Single colour':t('Single'),'Rainbow':t('Rainbow')}[self.rainbow.get()]
+  text=t('Send will write: {effect} / brightness {brightness}/4 / speed {speed}/4 / colour {colour} / mode {mode}').format(effect=t(self.effect.get()),brightness=self.brightness.get(),speed=self.speed.get(),colour=self.color.get().upper(),mode=mode)
+  current=(self.settings or {}).get('lighting')
+  if not current:return text+'\n'+t('The keyboard\'s current lighting has not been read yet.')
+  changed=[]
+  if EFFECTS[current['mode']-1]!=self.effect.get():changed.append(t('effect'))
+  if current['brightness']!=self.brightness.get():changed.append(t('brightness'))
+  if current['speed']!=self.speed.get():changed.append(t('speed'))
+  if current['color'].lower()!=self.color.get().lower():changed.append(t('colour'))
+  wanted={'Single colour':0,'Rainbow':1}.get(self.rainbow.get())
+  if wanted is not None and current['rainbow_raw']!=wanted:changed.append(t('mode'))
+  return text+'\n'+(t('Different from the keyboard now: {fields}.').format(fields=', '.join(changed)) if changed else t('Same as the keyboard now; sending changes nothing.'))
  SWATCHES=['#b9a6ea','#ff6f9c','#7cf2c2','#ffc66b','#8f9cff','#f2f2f2','#3a2f55']
  def draw_swatches(self):
   c=self.swatches;c.delete('all');current=self.color.get().lower()
@@ -277,7 +305,7 @@ class Studio:
   self.editor.insert('insert lineend',('\n' if line else '')+token);self.editor.see('insert');self.editor.focus_set()
 
  def _battery(self):
-  _,p=self.scrollable('Battery');top=ttk.Frame(p);top.pack(fill='x')
+  p=self.pages['Battery'];top=ttk.Frame(p);top.pack(fill='x')
   self.doctor_canvas=tk.Canvas(top,width=384,height=216,bg=PANEL,highlightthickness=2,highlightbackground=pixel.LINE_DK);self.doctor_canvas.pack(side='left',anchor='n')
   art=ASSETS/'assets/pixel/battery-scene.png'
   if art.exists():self.doctor_photo=tk.PhotoImage(file=str(art));self.doctor_canvas.create_image(2,2,anchor='nw',image=self.doctor_photo)
@@ -317,7 +345,7 @@ class Studio:
   self.start_battery_button.configure(state='disabled' if self.monitoring else 'normal');self.stop_battery_button.configure(state='normal' if self.monitoring else 'disabled')
 
  def _firmware(self):
-  _,p=self.scrollable('Firmware');f=self.row(p)
+  p=self.pages['Firmware'];f=self.row(p)
   self.firmware_preview=ttk.Label(f,background=PANEL);self.firmware_preview.pack(side='left',padx=(0,24))
   info=ttk.Frame(f);info.pack(side='left',fill='both',expand=True)
   self.preview_title=tk.StringVar();ttk.Label(info,textvariable=self.preview_title,font=HEAD).pack(anchor='w',pady=10)
@@ -364,7 +392,7 @@ class Studio:
   self.status.set(t('File inspected locally. Nothing was uploaded.'))
 
  def _screen(self):
-  self.screen_scroll,p=self.scrollable('Screen');self.screen_content=p
+  self.screen_scroll,p,_=self.scrollers['Screen'];self.screen_content=p
   self.root.bind('<MouseWheel>',self.scroll_screen,add='+')
   self.root.bind('<Button-4>',self.scroll_screen,add='+');self.root.bind('<Button-5>',self.scroll_screen,add='+')
   left=pixel.panel(p,'LCD  160 x 96');left.pack(side='left',fill='y')
@@ -382,7 +410,7 @@ class Studio:
   self.media_progress=ttk.Progressbar(left,maximum=100);self.media_progress.pack(fill='x')
   right=ttk.Frame(p);right.pack(side='left',fill='both',expand=True,padx=(12,0))
   scene=pixel.panel(right,t('SCENE'));scene.pack(fill='x')
-  scene_note=tk.Label(scene,text=t('Upload replaces the custom animation bank. Switch back to the clock scene at any time.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=340,justify='left');scene_note.pack(fill='x',pady=(0,10))
+  scene_note=tk.Label(scene,text=t('The keyboard screen shows either the clock scene or the image/GIF you upload. A new upload replaces the previous one. Press the button below to go back to the clock scene.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=340,justify='left',anchor='w');scene_note.pack(fill='x',pady=(0,10))
   scene.bind('<Configure>',lambda e:scene_note.configure(wraplength=max(120,e.width-32)))
   f=tk.Frame(scene,bg=PANEL);f.pack(anchor='w');self.button(f,t('Lavender desktop'),lambda:self.change_screen(0))
   clock=pixel.panel(right,t('CLOCK'));clock.pack(fill='both',expand=True,pady=(12,0))
@@ -401,19 +429,29 @@ class Studio:
   ram_note=tk.Label(clock,text=t('Time and format stay in RAM. After a full power loss, reopen the app to sync again.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=340,justify='left',anchor='w');ram_note.pack(fill='x',pady=(10,0))
   clock.bind('<Configure>',lambda e:[label.configure(wraplength=max(120,e.width-32)) for label in (self.clock_note_label,help_note,ram_note)])
 
- def scrollable(self,name):
-  """Wrap a page in a vertical scroller so long text (translations, warnings) never pushes controls out of reach."""
-  page=self.pages[name]
+ def scrollable(self,name,fill=False):
+  """Wrap a page in a vertical scroller so long text never pushes controls out of reach.
+
+  The content fills the page when it fits (so expanding widgets still expand) and scrolls when it
+  does not; the scrollbar is shown only while it is needed.
+  """
+  page=self.page_frames[name]
   canvas=tk.Canvas(page,bg=BG,highlightthickness=0,width=1,height=1,yscrollincrement=16)
-  scrollbar=ttk.Scrollbar(page,orient='vertical',command=canvas.yview);scrollbar.pack(side='right',fill='y',padx=(8,0))
+  scrollbar=ttk.Scrollbar(page,orient='vertical',command=canvas.yview)
   canvas.configure(yscrollcommand=scrollbar.set);canvas.pack(side='left',fill='both',expand=True)
   content=ttk.Frame(canvas);item=canvas.create_window(0,0,window=content,anchor='nw')
-  canvas.bind('<Configure>',lambda e:canvas.itemconfigure(item,width=e.width))
-  content.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')))
-  self.scrollers[name]=(canvas,content);return canvas,content
+  def fit(event=None):
+   view=canvas.winfo_height();need=content.winfo_reqheight();width=canvas.winfo_width()
+   canvas.itemconfigure(item,width=width if width>1 else 0,height=view if fill and 1<view and need<=view else 0)
+   canvas.configure(scrollregion=(0,0,max(width,content.winfo_reqwidth()),max(need,view)))
+   if view<=1:return
+   if need>view+1 and not scrollbar.winfo_manager():scrollbar.pack(side='right',fill='y',padx=(8,0),before=canvas)
+   elif need<=view+1 and scrollbar.winfo_manager():scrollbar.pack_forget();canvas.yview_moveto(0)
+  canvas.bind('<Configure>',fit);content.bind('<Configure>',fit)
+  self.scrollers[name]=(canvas,content,fit);return canvas,content
  def scroll_screen(self,event):
   if self.page_name not in self.scrollers:return
-  canvas,content=self.scrollers[self.page_name]
+  canvas,content,_=self.scrollers[self.page_name]
   widget=event.widget
   while widget is not None and widget not in (content,canvas):
    if isinstance(widget,(ttk.Combobox,tk.Text,tk.Listbox)):return
@@ -492,7 +530,7 @@ class Studio:
   self.label(p,t('Copy this context into an AI chat. Verified behavior and open questions are explicitly separated. No private device paths are included.'),True,wraplength=880)
   f=self.row(p);self.button(f,t('Copy AI context'),self.copy_knowledge,True);self.button(f,t('Export Markdown'),self.export_knowledge);self.button(f,t('Export JSON'),lambda:self.save_json(self.knowledge_record(),'x68-knowledge.json'))
   body=ttk.Frame(p);body.pack(fill='both',expand=True,pady=10)
-  text=tk.Text(body,bg=PANEL,fg=INK,font=BODY,wrap='word',relief='flat',padx=16,pady=14)
+  text=tk.Text(body,height=12,bg=PANEL,fg=INK,font=BODY,wrap='word',relief='flat',padx=16,pady=14)
   scroll=ttk.Scrollbar(body,command=text.yview);scroll.pack(side='right',fill='y');text.configure(yscrollcommand=scroll.set);text.pack(fill='both',expand=True)
   try:self.knowledge=(ASSETS/'docs/AI-KNOWLEDGE.md').read_text(encoding='utf-8')
   except OSError:self.knowledge=t('Knowledge file missing. Use the complete application folder.')
@@ -507,7 +545,7 @@ class Studio:
   p=self.pages['Advanced'];tabs=ttk.Notebook(p);tabs.pack(fill='both',expand=True)
   raw=ttk.Frame(tabs,padding=12);test=ttk.Frame(tabs,padding=12);tools=ttk.Frame(tabs,padding=12)
   tabs.add(raw,text=t('Device & packets'));tabs.add(test,text=t('Key tester'));tabs.add(tools,text=t('Backups & logs'))
-  self.raw=tk.Text(raw,bg=PANEL,fg=MUTED,font=BODY,wrap='word',relief='flat',padx=12,pady=12,state='disabled');self.raw.pack(fill='both',expand=True)
+  self.raw=tk.Text(raw,height=12,bg=PANEL,fg=MUTED,font=BODY,wrap='word',relief='flat',padx=12,pady=12,state='disabled');self.raw.pack(fill='both',expand=True)
   self.label(test,t('Focused-window Raw Input from the X68 only. Key tester requires Windows.'),True)
   self.test_canvas=tk.Canvas(test,height=245,bg=PANEL,highlightthickness=0);self.test_canvas.pack(fill='x',pady=14)
   f=self.row(test);self.button(f,t('Start 60-second test'),self.start_test,True);self.button(f,t('Stop test'),self.stop_test);self.button(f,t('Clear results'),self.clear_test)
@@ -517,7 +555,7 @@ class Studio:
   self.button(self.row(tools),t('Read cached ADC snapshot'),self.read_adc_snapshot)
   self.label(tools,t('Advanced matrix-cell selection (optional):'),True)
   self.source_combo=ttk.Combobox(tools,textvariable=self.source,state='readonly',width=45);self.source_combo.pack(anchor='w',pady=8);self.source_combo.bind('<<ComboboxSelected>>',self.select_matrix)
-  self.log_text=tk.Text(tools,bg=PANEL,fg=MUTED,font=BODY,wrap='word',relief='flat',padx=12,pady=12,state='disabled');self.log_text.pack(fill='both',expand=True,pady=15)
+  self.log_text=tk.Text(tools,height=8,bg=PANEL,fg=MUTED,font=BODY,wrap='word',relief='flat',padx=12,pady=12,state='disabled');self.log_text.pack(fill='both',expand=True,pady=15)
 
  def submit(self,name,func,done=None):
   if self.closed:return False
@@ -552,6 +590,7 @@ class Studio:
   self.editable=[k for k in result['keys'] if k['editable']]
   self.source_combo.configure(values=[t('Cell')+f" {k['index']:03d}  /  {k['name']}" for k in self.editable])
   self.update_selection()
+  self.lighting_changed()
   self.status.set(t('Settings loaded. Nothing is written until you press Send.'));self.next_clock_sync=0;self.draw_boards();self.slot_choice.refresh()
   if not self.version:self.read_version()
  def read_version(self):self.submit('Checking installed build',self.client.query_version,self.show_version)
@@ -591,9 +630,12 @@ class Studio:
   return {'BACKSPACE':'Back','CAPSLOCK':'Caps','PAGEDOWN':'PgDn','PAGEUP':'PgUp',
           'DELETE':'Del','INSERT':'Ins','PRINTSCREEN':'PrtSc','SCROLLLOCK':'ScrLk',
           'RIGHT':'→','LEFT':'←','DOWN':'↓','UP':'↑'}.get(name,name.title() if len(name)>3 and not name.startswith('HID ') else name)
- def draw_boards(self,phase=0):
+ def draw_boards(self,phase=0,only=None):
   body_font=tk.font.Font(root=self.root,font=BODY)
-  for canvas,kind in [(self.rgb_canvas,'rgb'),(self.map_canvas,'map'),(self.test_canvas,'test')]:
+  for kind in ('rgb','map','test'):
+   if only and kind not in only:continue
+   canvas=getattr(self,kind+'_canvas')
+   colours=self.preview_colours(phase) if kind=='rgb' else {}
    canvas.delete('all');width=max(canvas.winfo_width(),760);unit=int((width-36)/18.0);boxes=[];bg=canvas.cget('bg')
    right=18+int(17.75*unit)+6;cut=8
    canvas.create_polygon(6+cut,4,right-cut,4,right,4+cut,right,244-cut,right-cut,244,6+cut,244,6,244-cut,6,4+cut,fill='#241b3d',outline=pixel.LINE_DK,width=2)
@@ -601,7 +643,7 @@ class Studio:
     x=16+int(column*unit);y=14+row*45;w=int(unit*size)-4;fill=KEY;ink='#2b1e3e';cursor=pressed=False
     if key in ('ESC','ENTER','SPACE','UP','LEFT','DOWN','RIGHT'):fill='#e2b2d9'
     if kind=='rgb':
-     fill=self.paint.get(key,self.color.get()) if self.preview_mode.get()=='Per-key design draft' else self.effect_color(self.effect.get(),row,x/width,phase)
+     fill=self.paint.get(key,self.color.get()) if self.preview_mode.get()=='Per-key design draft' else colours.get(key,'#3b304b')
      ink=pixel.DESK if sum(int(fill[i:i+2],16) for i in (1,3,5))>370 else INK
     if kind=='map':
      index=self.lookup(key)
@@ -617,18 +659,9 @@ class Studio:
     pixel.keycap(canvas,x,y,w,40,fill,label,ink,cursor,pressed,font=legend_font)
     boxes.append((x,y,x+w,y+40,key))
    if kind in ('rgb','map'):self.keyboxes[kind]=boxes
- def effect_color(self,mode,row,x,phase):
-  c=self.color.get();rainbow=self.rainbow.get()=='Rainbow' or (self.rainbow.get()=='Keep device flag' and getattr(self,'device_rainbow',False))
-  try:base=tuple(int(c[i:i+2],16)/255 for i in (1,3,5))
-  except ValueError:base=(.71,.61,.80)
-  if mode=='Off':return '#3b304b'
-  if rainbow and mode in ('Solid','Breathing'):
-   hue=(x+row*.05+phase*.06)%1;level=1 if mode=='Solid' else .3+.7*(math.sin(phase)+1)/2
-   return '#'+''.join(f'{int(v*level*255):02x}' for v in colorsys.hsv_to_rgb(hue,.4,.9))
-  if mode=='Solid':return '#'+''.join(f'{int(v*255):02x}' for v in base)
-  if mode=='Breathing':return '#'+''.join(f'{int(v*(.3+.7*(math.sin(phase)+1)/2)*255):02x}' for v in base)
-  hue=(x+row*.05+phase*.06)%1;rgb=colorsys.hsv_to_rgb(hue,.4,.9)
-  return '#'+''.join(f'{int(v*255):02x}' for v in rgb)
+ def preview_colours(self,phase):
+  rainbow=self.rainbow.get()=='Rainbow' or (self.rainbow.get()=='Keep device flag' and getattr(self,'device_rainbow',False))
+  return effects.frame(self.effect.get(),PREVIEW_KEYS,phase,self.color.get(),rainbow,self.speed.get(),self.brightness.get())
  def hit(self,event,kind):return next((b[4] for b in self.keyboxes.get(kind,[]) if b[0]<=event.x<=b[2] and b[1]<=event.y<=b[3]),None)
  def paint_key(self,event):
   if self.preview_mode.get()!='Per-key design draft':return
@@ -856,10 +889,12 @@ class Studio:
      if modifiers.get(raw) is False:self.pressed.discard(key)
  def animate(self):
   if self.closed:return
-  if self.page_name in ('Lighting','Keymap','Advanced'):self.draw_boards(time.monotonic())
+  if self.page_name=='Lighting':self.draw_boards(time.monotonic(),only=('rgb',))
+  elif self.page_name in ('Keymap','Advanced'):self.draw_boards(time.monotonic())
+  if self.page_name in self.scrollers:self.scrollers[self.page_name][2]()
   if self.page_name=='Screen' and self.media_photos and time.monotonic()>=self.media_due:
    self.screen_preview.configure(image=self.media_photos[self.media_frame]);self.media_frame=(self.media_frame+1)%len(self.media_photos);self.media_due=time.monotonic()+self.prepared.period_ms/1000
-  self.root.after(50 if self.page_name=='Screen' else 130,self.animate)
+  self.root.after(50 if self.page_name in ('Screen','Lighting') else 130,self.animate)
  def smoke_done(self):
   result={'inventory_loaded':bool(self.inventory),'window_size':[self.root.winfo_width(),self.root.winfo_height()],'pages':list(self.pages),'english_ui':True,'no_automatic_settings_write':True,'firmware_install_requires_click':True}
   (WORK/'reports').mkdir(parents=True,exist_ok=True);(WORK/'reports/gui-smoke.json').write_text(json.dumps(result,indent=2),encoding='utf-8');print(json.dumps(result));self.close()

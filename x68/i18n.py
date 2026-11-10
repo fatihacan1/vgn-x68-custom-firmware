@@ -260,10 +260,10 @@ TR = {
     'Choose image / GIF': 'Resim / GIF seç',
     'Upload': 'Yükle',
     'PNG, JPG, GIF, WEBP or BMP. Long GIFs are sampled to 8 frames.': 'PNG, JPG, GIF, WEBP veya BMP. Uzun GIF\'lerden 8 kare alınır.',
-    'SCENE': 'SAHNE',
-    'Upload replaces the custom animation bank. Switch back to the clock scene at any time.':
-        'Yükleme özel animasyon bankasının yerine geçer. İstediğiniz zaman saat sahnesine dönebilirsiniz.',
-    'Lavender desktop': 'Lavender masaüstü',
+    'SCENE': 'EKRAN GÖRÜNÜMÜ',
+    'The keyboard screen shows either the clock scene or the image/GIF you upload. A new upload replaces the previous one. Press the button below to go back to the clock scene.':
+        'Klavyenin ekranı ya saat sahnesini ya da yüklediğiniz resmi/GIF\'i gösterir. Yeni bir yükleme öncekinin yerine geçer. Saat sahnesine dönmek için aşağıdaki düğmeye basın.',
+    'Lavender desktop': 'Saat sahnesine dön',
     'CLOCK': 'SAAT',
     'Sync time automatically': 'Saati otomatik eşitle',
     'Every': 'Her',
@@ -394,6 +394,38 @@ TR = {
     'Unrecognised firmware': 'Tanınmayan firmware',
     "The builds here were made only for VGN's original V0113 firmware. Writing them over a different version could leave the keyboard unusable.":
         'Buradaki sürümler yalnızca VGN\'in orijinal V0113 firmware\'i için hazırlandı. Farklı bir sürümün üzerine yazmak klavyeyi kullanılamaz hale getirebilir.',
+
+    # Lighting preview
+    'Colours flow across the keyboard from left to right.': 'Renkler klavyede soldan sağa akar.',
+    'Soft clouds of colour drift and blend slowly.': 'Yumuşak renk bulutları yavaşça süzülür ve birbirine karışır.',
+    'Colours spin around the centre of the keyboard.': 'Renkler klavyenin ortası etrafında döner.',
+    'The whole keyboard cycles through every colour together.': 'Tüm klavye aynı anda sırayla bütün renklere geçer.',
+    'Keys slowly fade in and out, like breathing.': 'Tuşlar nefes alır gibi yavaşça yanıp söner.',
+    'Every key stays on one steady colour.': 'Bütün tuşlar sabit tek bir renkte kalır.',
+    'Only the keys you press light up, then fade away.': 'Yalnızca bastığınız tuşlar yanar, sonra yavaşça söner.',
+    'Each key press sends a ring of light outwards.': 'Her tuş basışı dışa doğru yayılan bir ışık halkası oluşturur.',
+    'A light runs across the keys, leaving a fading tail.': 'Bir ışık tuşların üzerinde koşar, arkasında sönen bir iz bırakır.',
+    'Random keys twinkle on and off like stars.': 'Rastgele tuşlar yıldızlar gibi parıldar.',
+    'Patches of colour bloom open and fade, one after another.': 'Renk lekeleri çiçek gibi açılır ve sırayla solar.',
+    'Bands of colour scroll up the keyboard row by row.': 'Renk şeritleri sıra sıra yukarı doğru kayar.',
+    'Colours spread outwards from the middle to both sides.': 'Renkler ortadan iki yana doğru kanat gibi açılır.',
+    'Keys light up column by column until the board is full.': 'Tuşlar sütun sütun yanar, klavye dolana kadar birikir.',
+    'Drops of light fall down the keyboard.': 'Işık damlaları klavyede yukarıdan aşağı düşer.',
+    'A bar of light sweeps from side to side.': 'Bir ışık çubuğu bir yandan öbür yana tarar.',
+    'Rings of colour keep spreading out from the centre.': 'Renk halkaları ortadan sürekli dışa yayılır.',
+    'The wave effect, flowing much faster.': 'Dalga efektinin çok daha hızlı akan hâli.',
+    'Plays the per-key colour table stored on the keyboard; shown here as one colour.':
+        'Klavyede kayıtlı tuş başına renk tablosunu oynatır; burada tek renk olarak gösterilir.',
+    'All lighting is switched off.': 'Tüm aydınlatma kapalıdır.',
+    'The animation is an approximation; Send shows the real effect on the keyboard.':
+        'Animasyon yaklaşıktır; gerçek efekti görmek için klavyeye gönderin.',
+    'Key draft is local only and is never sent to the keyboard.': 'Tuş taslağı yalnızca bu bilgisayardadır, klavyeye asla gönderilmez.',
+    'Send will write: {effect} / brightness {brightness}/4 / speed {speed}/4 / colour {colour} / mode {mode}':
+        'Gönderilecek: {effect} / parlaklık {brightness}/4 / hız {speed}/4 / renk {colour} / mod {mode}',
+    "The keyboard's current lighting has not been read yet.": 'Klavyedeki mevcut aydınlatma henüz okunmadı.',
+    'effect': 'efekt', 'brightness': 'parlaklık', 'speed': 'hız', 'colour': 'renk', 'mode': 'mod',
+    'Different from the keyboard now: {fields}.': 'Klavyedeki ayardan farklı olanlar: {fields}.',
+    'Same as the keyboard now; sending changes nothing.': 'Klavyedeki ayarla aynı; göndermek bir şey değiştirmez.',
 
     # Background operations (shown as "<name>..." and "<name> complete.")
     '{operation} complete.': '{operation} tamamlandı.',
