@@ -10,7 +10,11 @@ from datetime import datetime
 import hashlib, io, json, time
 from PIL import Image, ImageOps
 from .protocol import ProtocolError
-from .firmware import LIVE_CLOCK_CRC, LIVE_CLOCK_CRCS
+from .firmware import LIVE_CLOCK_CRC, LIVE_CLOCK_CRCS, MULTI_SCREEN_CRCS
+# Lavender 0.10.0 screen table in the parameter block: 45..47 magic, then four
+# entries (first frame, frame count, period LE16) for screens 1-4 at 48..63.
+SCREEN_MAGIC=b'XS\x01'
+SCREENS=4
 
 WIDTH,HEIGHT=160,96
 FRAME_BYTES=WIDTH*HEIGHT*2
@@ -80,14 +84,15 @@ def _send_media(device,frame,trace):
     raise ProtocolError('Media packet was not acknowledged. Transfer stopped without a blind retry.')
 
 def set_screen(settings,mode):
-    if mode not in (0,4):raise ProtocolError('Only Lavender desktop and explicit custom media are selectable.')
+    # The same five values Fn+PgUp cycles through (measured: 0,1,2,3,4).
+    if mode not in (0,1,2,3,4):raise ProtocolError('Screen mode must be 0-4.')
     with settings._device() as device:
         before=settings._read(device,5,64);desired=bytearray(before);desired[33]=mode
         backup=settings._backup('lighting',before)
         with settings._transaction(device):settings._write(device,6,bytes(desired))
         after=settings._read(device,5,64)
         if after[33]!=mode:raise ProtocolError('Display mode readback differs. Backup: '+backup)
-    return {'screen':'Lavender desktop' if mode==0 else 'Custom media','backup':backup}
+    return {'screen':mode,'backup':backup}
 
 def upload_media(settings,prepared,project_dir,progress=None):
     if not 1<=len(prepared.frames)<=8 or not 50<=prepared.period_ms<=5000:raise ProtocolError('Invalid prepared media.')
@@ -107,7 +112,7 @@ def upload_media(settings,prepared,project_dir,progress=None):
             before=settings._read(device,5,64);result['parameter_backup']=settings._backup('lighting',before)
             # Exit the media player before erasing its bank. This also clears
             # the renderer's cached frame for single-frame replacements.
-            if before[33]==4:
+            if 1<=before[33]<=4:
                 desktop=bytearray(before);desktop[33]=0
                 with settings._transaction(device):settings._write(device,6,bytes(desktop))
                 if settings._read(device,5,64)[33]!=0:raise ProtocolError('Could not leave custom-media mode.')
@@ -118,9 +123,72 @@ def upload_media(settings,prepared,project_dir,progress=None):
                     _send_media(device,media_packet(offset,payload[offset:offset+56]),trace)
                     if progress:progress(min(offset+56,len(payload)),len(payload))
             desired=bytearray(before);desired[33]=4;desired[34]=len(prepared.frames);desired[42:44]=prepared.period_ms.to_bytes(2,'little')
+            desired[45:48]=bytes(3)  # one image for screen 4: switch any multi-screen table off
             with settings._transaction(device):settings._write(device,6,bytes(desired))
             after=settings._read(device,5,64)
-            if after[33:35]!=desired[33:35] or after[42:44]!=desired[42:44]:raise ProtocolError('Media settings readback differs.')
+            if after[33:35]!=desired[33:35] or after[42:48]!=desired[42:48]:raise ProtocolError('Media settings readback differs.')
         result['phase']='complete';return result
     except Exception as error:result['phase']='stopped';result['error']=str(error);raise
     finally:(folder/'upload.json').write_text(json.dumps(result,indent=2),encoding='utf-8')
+
+
+def screen_table(slots):
+    """Bank layout for screens 1-4: [(first, count, period) or None]; frames are packed in screen order."""
+    if len(slots)!=SCREENS:raise ValueError('Four screen slots are expected.')
+    table=[];first=0
+    for prepared in slots:
+        if prepared is None:table.append(None);continue
+        count=len(prepared.frames)
+        if not 1<=count or not 50<=prepared.period_ms<=5000:raise ProtocolError('Invalid prepared media.')
+        table.append((first,count,prepared.period_ms));first+=count
+    if first>MAX_FRAMES:raise ProtocolError(f'The screens use {first} frames; the keyboard holds {MAX_FRAMES}.')
+    if not first:raise ProtocolError('Choose an image for at least one screen.')
+    return table
+
+
+def screen_parameters(before,table,show):
+    """The parameter block with the screen table written and screen `show` selected."""
+    desired=bytearray(before);desired[33]=show;desired[45:48]=SCREEN_MAGIC
+    # Stock Fn+PgUp/PgDn (V0113 20012128..2001214C, 200123D8) only reaches mode 4 while
+    # parameter 34 is non-zero; with the table present Lavender itself ignores 34.
+    desired[34]=sum(entry[1] for entry in table if entry)
+    for index,entry in enumerate(table):
+        first,count,period=entry or (0,0,0)
+        desired[48+index*4:52+index*4]=bytes([first,count])+period.to_bytes(2,'little')
+    return desired
+
+
+def upload_screens(settings,slots,project_dir,show=1,progress=None):
+    """Write every screen's frames as one bank (stock command 21 erases the whole bank), then the table."""
+    table=screen_table(slots)
+    if not 0<=show<=SCREENS:raise ProtocolError('Screen mode must be 0-4.')
+    payload=b''.join(prepared.data for prepared in slots if prepared is not None)
+    remaining=2-(time.monotonic()-settings.client.last_query)
+    if remaining>0:time.sleep(remaining)
+    version=settings.client.query_version()
+    if version['reported_crc'] not in MULTI_SCREEN_CRCS:raise ProtocolError('Separate screens need Lavender Quest 0.10.0.')
+    folder=Path(project_dir)/'reports/media'/datetime.now().strftime('%Y%m%d-%H%M%S-%f');folder.mkdir(parents=True)
+    (folder/'converted.rgb565').write_bytes(payload)
+    meta={'screens':[None if s is None else s.metadata() for s in slots],'table':table,'show':show}
+    (folder/'conversion.json').write_text(json.dumps(meta,indent=2),encoding='utf-8')
+    trace=[];result={'phase':'preflight','screens':meta,'trace':trace}
+    try:
+        with settings._device(wireless=False) as device:
+            before=settings._read(device,5,64);result['parameter_backup']=settings._backup('lighting',before)
+            if 1<=before[33]<=4:
+                desktop=bytearray(before);desktop[33]=0
+                with settings._transaction(device):settings._write(device,6,bytes(desktop))
+                if settings._read(device,5,64)[33]!=0:raise ProtocolError('Could not leave custom-media mode.')
+                time.sleep(0.3)
+            result['phase']='writing_custom_media'
+            with settings._transaction(device):
+                for offset in range(0,len(payload),56):
+                    _send_media(device,media_packet(offset,payload[offset:offset+56]),trace)
+                    if progress:progress(min(offset+56,len(payload)),len(payload))
+            desired=screen_parameters(before,table,show)
+            with settings._transaction(device):settings._write(device,6,bytes(desired))
+            after=settings._read(device,5,64)
+            if after[33]!=desired[33] or after[45:64]!=desired[45:64]:raise ProtocolError('Screen table readback differs.')
+        result['phase']='complete';return result
+    except Exception as error:result['phase']='stopped';result['error']=str(error);raise
+    finally:(folder/'upload.json').write_text(json.dumps(result,indent=2,default=str),encoding='utf-8')

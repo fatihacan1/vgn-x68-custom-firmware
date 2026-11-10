@@ -20,6 +20,7 @@ UPDATER_URL = 'https://cdn.vgnclub.com/vgn/driver/X68/' + urllib.parse.quote('X6
 UPDATER_SHA256 = 'cdf4535a909900c7644e496d415552c6b210f0f87afb77c80a54782e571bd771'
 PATCHES = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parents[1])) / 'firmware-patches'
 BUILDS = {'Lavender Quest 0.9.2 / retro status badges': 'lavender-quest-0.9.2',
+          'Lavender Quest 0.10.0 / multi-screen (experimental)': 'lavender-quest-0.10.0',
           'Lavender Quest 0.9.1 / pixel status badges': 'lavender-quest-0.9.1',
           'Lavender Quest 0.9.0 / live mode and lock': 'lavender-quest-0.9.0',
           'Lavender Quest 0.8.0 / 12-24 hour clock': 'lavender-quest-0.8.0',
