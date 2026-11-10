@@ -11,7 +11,7 @@ from .battery import query_battery, BatteryHistory
 from .battery_health import ASSUMPTION, ChargeTrend, estimate
 from .firmware import LIVE_CLOCK_CRC, LIVE_CLOCK_CRCS, BATTERY_DIAGNOSTIC_CRC, BATTERY_DIAGNOSTIC_CRCS, CLOCK_FORMAT_CRC, CLOCK_FORMAT_CRCS, DEVICE_STATUS_CRC, STATUS_BADGE_CRC, RETRO_BADGE_CRC
 from .media import convert_media, upload_media, set_screen
-from . import autostart, firmware_source
+from . import autostart, firmware_source, safety
 from PIL import Image, ImageTk, ImageOps
 from . import pixel, i18n
 from .i18n import t
@@ -51,8 +51,9 @@ class Studio:
   self.client=X68Client();self.settings_client=SettingsClient(self.client,WORK/'reports/backups')
   self.pool=ThreadPoolExecutor(max_workers=1);self.results=queue.Queue();self.keys=queue.Queue()
   self.inventory=None;self.settings=None;self.version=None;self.logs=[];self.monitor=None
+  self.awake=False
   self.history=BatteryHistory();self.monitoring=False;self.next_battery=0;self.test_until=0;self.pressed=set();self.counts={}
-  self.selected=None;self.paint={};self.keyboxes={};self.page_name='Lighting';self.photos=[]
+  self.selected=None;self.paint={};self.keyboxes={};self.page_name='Lighting';self.photos=[];self.scrollers={}
   self.pending_mapping={};self.external_firmware=None;self.operation='';self.operation_started=0;self.needs_battery_read=False
   self.prepared=None;self.media_photos=[];self.media_frame=0;self.media_due=0;self.next_clock_sync=0;self.next_reconnect=float('inf')
   try:preferences=json.loads((WORK/'preferences.json').read_text(encoding='utf-8'))
@@ -242,6 +243,7 @@ class Studio:
   self.mapping_note=tk.StringVar(value=t('Empty. Picking keys never writes the keyboard.'))
   tk.Label(draft,textvariable=self.mapping_note,font=BODY,bg=PANEL,fg=MINT,wraplength=400,justify='left',anchor='nw').pack(anchor='w',fill='x')
   f=tk.Frame(draft,bg=PANEL);f.pack(anchor='w',side='bottom');self.mapping_send=self.button(f,t('Send draft ({count})').format(count=0),self.remap,True);self.mapping_send.configure(state='disabled');self.button(f,t('Discard'),self.clear_mapping)
+  tk.Label(draft,text=t('Made a mistake? Every send is backed up first. Undo it in Advanced > Restore settings backup.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=400,justify='left').pack(anchor='w',side='bottom',pady=(0,10))
   self.source=tk.StringVar()
 
  def change_action_type(self,event=None):
@@ -273,7 +275,7 @@ class Studio:
   self.editor.insert('insert lineend',('\n' if line else '')+token);self.editor.see('insert');self.editor.focus_set()
 
  def _battery(self):
-  p=self.pages['Battery'];top=ttk.Frame(p);top.pack(fill='x')
+  _,p=self.scrollable('Battery');top=ttk.Frame(p);top.pack(fill='x')
   self.doctor_canvas=tk.Canvas(top,width=384,height=216,bg=PANEL,highlightthickness=2,highlightbackground=pixel.LINE_DK);self.doctor_canvas.pack(side='left',anchor='n')
   art=ASSETS/'assets/pixel/battery-scene.png'
   if art.exists():self.doctor_photo=tk.PhotoImage(file=str(art));self.doctor_canvas.create_image(2,2,anchor='nw',image=self.doctor_photo)
@@ -286,6 +288,7 @@ class Studio:
   tk.Label(right,textvariable=self.verdict,font=HEAD,bg=BG,fg=INK,wraplength=420,justify='left').pack(anchor='w',pady=(12,14))
   self.monitor_note=tk.StringVar(value=t('Monitoring stopped')+t(' / {count} readings').format(count=0));self.trend_note=tk.StringVar(value='')
   f=ttk.Frame(right);f.pack(anchor='w');self.button(f,t('Measure now'),self.read_battery,True);self.start_battery_button=self.button(f,t('Start monitoring'),self.start_monitor);self.stop_battery_button=self.button(f,t('Stop'),self.stop_monitor);self.stop_battery_button.configure(state='disabled')
+  self.battery_warning=tk.Label(p,text=t('SAFETY: these steps mean opening the keyboard and powering a lithium battery from outside. Lithium batteries can get hot, swell or catch fire. If you are not comfortable with electronics, take it to a repair shop instead. Never leave it unattended.'),font=BODY,bg=BG,fg=PINK,wraplength=880,justify='left',anchor='w')
   self.steps=ttk.Frame(p);self.steps.pack(fill='x',pady=(12,0))
   self.chart=tk.Canvas(p,height=84,bg=PANEL,highlightthickness=2,highlightbackground=pixel.LINE_DK);self.chart.pack(fill='x',pady=(8,6));self.chart.bind('<Configure>',lambda event:self.draw_chart())
   f=ttk.Frame(p);f.pack(fill='x');tk.Label(f,textvariable=self.monitor_note,font=BODY,bg=BG,fg=MINT).pack(side='left');tk.Label(f,textvariable=self.trend_note,font=BODY,bg=BG,fg=AMBER).pack(side='left',padx=16)
@@ -294,6 +297,9 @@ class Studio:
   self.show_steps([t('Connect the keyboard over USB in wired mode.'),t('Voltage needs the Lavender Quest 0.6.0 build (Firmware page).')])
   # Compatibility with the launcher's --monitor-battery option.
   self.battery_panel=self
+ def show_battery_warning(self,visible):
+  if visible and not self.battery_warning.winfo_ismapped():self.battery_warning.pack(fill='x',pady=(12,0),before=self.steps)
+  elif not visible:self.battery_warning.pack_forget()
  def show_steps(self,steps):
   for child in self.steps.winfo_children():child.destroy()
   for number,text in enumerate(steps,1):
@@ -309,7 +315,7 @@ class Studio:
   self.start_battery_button.configure(state='disabled' if self.monitoring else 'normal');self.stop_battery_button.configure(state='normal' if self.monitoring else 'disabled')
 
  def _firmware(self):
-  p=self.pages['Firmware'];f=self.row(p)
+  _,p=self.scrollable('Firmware');f=self.row(p)
   self.firmware_preview=ttk.Label(f,background=PANEL);self.firmware_preview.pack(side='left',padx=(0,24))
   info=ttk.Frame(f);info.pack(side='left',fill='both',expand=True)
   self.preview_title=tk.StringVar();ttk.Label(info,textvariable=self.preview_title,font=HEAD).pack(anchor='w',pady=10)
@@ -319,8 +325,9 @@ class Studio:
   self.build.trace_add('write',lambda *args:self.update_firmware_preview())
   f=self.row(p);self.button(f,t('Import file'),self.choose_firmware);self.button(f,t('Check installed version'),self.read_version)
   self.allow_unreviewed=tk.BooleanVar(value=False)
-  ttk.Checkbutton(p,text=t('Allow my unreviewed binary (hardware recovery may be required)'),variable=self.allow_unreviewed).pack(anchor='w',pady=6)
+  ttk.Checkbutton(p,text=t('Allow my unreviewed binary (hardware recovery may be required)'),variable=self.allow_unreviewed,command=self.unreviewed_toggled).pack(anchor='w',pady=6)
   self.label(p,t('Builds are made on this computer from the official V0113 firmware, downloaded once from VGN\'s own server. Offline? Import the official updater EXE or your own 236,916-byte .bin. Importing never uploads anything.'),True,wraplength=850)
+  tk.Label(p,text='⚠ '+t('CAUTION: installing firmware rewrites the keyboard\'s own internal software. If it is interrupted (cable unplugged, power cut, computer goes to sleep) the keyboard may stop working. Lighting, keys and macros do NOT need a firmware install.'),font=BODY,bg=BG,fg=AMBER,wraplength=850,justify='left').pack(anchor='w',pady=(8,0))
   f=self.row(p);self.install_button=self.button(f,t('Install selected firmware'),self.install,True);self.button(f,t('Sync keyboard clock'),self.sync_clock)
   self.progress=ttk.Progressbar(p,maximum=4936);self.progress.pack(fill='x',pady=12)
   self.firmware_note=tk.StringVar(value=t('Select a build or inspect your own file, then explicitly click Install.'));ttk.Label(p,textvariable=self.firmware_note,style='Muted.TLabel',wraplength=880).pack(anchor='w')
@@ -355,14 +362,7 @@ class Studio:
   self.status.set(t('File inspected locally. Nothing was uploaded.'))
 
  def _screen(self):
-  page=self.pages['Screen']
-  self.screen_scroll=tk.Canvas(page,bg=BG,highlightthickness=0,width=1,height=1,yscrollincrement=16)
-  scrollbar=ttk.Scrollbar(page,orient='vertical',command=self.screen_scroll.yview);scrollbar.pack(side='right',fill='y',padx=(8,0))
-  self.screen_scroll.configure(yscrollcommand=scrollbar.set);self.screen_scroll.pack(side='left',fill='both',expand=True)
-  p=ttk.Frame(self.screen_scroll);self.screen_content=p
-  content=self.screen_scroll.create_window(0,0,window=p,anchor='nw')
-  self.screen_scroll.bind('<Configure>',lambda e:self.screen_scroll.itemconfigure(content,width=e.width))
-  p.bind('<Configure>',lambda e:self.screen_scroll.configure(scrollregion=self.screen_scroll.bbox('all')))
+  self.screen_scroll,p=self.scrollable('Screen');self.screen_content=p
   self.root.bind('<MouseWheel>',self.scroll_screen,add='+')
   self.root.bind('<Button-4>',self.scroll_screen,add='+');self.root.bind('<Button-5>',self.scroll_screen,add='+')
   left=pixel.panel(p,'LCD  160 x 96');left.pack(side='left',fill='y')
@@ -399,16 +399,27 @@ class Studio:
   ram_note=tk.Label(clock,text=t('Time and format stay in RAM. After a full power loss, reopen the app to sync again.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=340,justify='left',anchor='w');ram_note.pack(fill='x',pady=(10,0))
   clock.bind('<Configure>',lambda e:[label.configure(wraplength=max(120,e.width-32)) for label in (self.clock_note_label,help_note,ram_note)])
 
+ def scrollable(self,name):
+  """Wrap a page in a vertical scroller so long text (translations, warnings) never pushes controls out of reach."""
+  page=self.pages[name]
+  canvas=tk.Canvas(page,bg=BG,highlightthickness=0,width=1,height=1,yscrollincrement=16)
+  scrollbar=ttk.Scrollbar(page,orient='vertical',command=canvas.yview);scrollbar.pack(side='right',fill='y',padx=(8,0))
+  canvas.configure(yscrollcommand=scrollbar.set);canvas.pack(side='left',fill='both',expand=True)
+  content=ttk.Frame(canvas);item=canvas.create_window(0,0,window=content,anchor='nw')
+  canvas.bind('<Configure>',lambda e:canvas.itemconfigure(item,width=e.width))
+  content.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')))
+  self.scrollers[name]=(canvas,content);return canvas,content
  def scroll_screen(self,event):
-  if self.page_name!='Screen':return
+  if self.page_name not in self.scrollers:return
+  canvas,content=self.scrollers[self.page_name]
   widget=event.widget
-  while widget is not None and widget not in (self.screen_content,self.screen_scroll):
+  while widget is not None and widget not in (content,canvas):
    if isinstance(widget,(ttk.Combobox,tk.Text,tk.Listbox)):return
    widget=getattr(widget,'master',None)
-  if widget is None or self.screen_scroll.yview()==(0.0,1.0):return
+  if widget is None or canvas.yview()==(0.0,1.0):return
   number=getattr(event,'num',None);delta=getattr(event,'delta',0)
   steps=(-1 if number==4 else 1) if number in (4,5) else (-int(delta) if sys.platform=='darwin' else -int(delta/120))
-  if steps:self.screen_scroll.yview_scroll(steps,'units');return 'break'
+  if steps:canvas.yview_scroll(steps,'units');return 'break'
 
  def choose_media(self):
   if self.busy:return
@@ -428,7 +439,7 @@ class Studio:
   if not self.prepared:return self.status.set(t('Choose an image or GIF first.'))
   wireless=bool(self.inventory and self.inventory.get('transport')=='wireless')
   if not wireless and (not self.version or self.version.get('reported_crc') not in LIVE_CLOCK_CRCS):return self.status.set(t('Install Lavender Quest 0.6.0 in Firmware first.'))
-  if not messagebox.askokcancel(t('Replace custom animation'),t('Upload the converted preview?\n\nThis replaces the keyboard’s entire custom image/GIF bank. The previous animation cannot be read back.\nKeep USB connected until the transfer completes.'),parent=self.root):return
+  if not messagebox.askokcancel(t('Replace custom animation'),t('Upload the converted preview?\n\nThis replaces the keyboard’s entire custom image/GIF bank. The previous animation cannot be read back.\nKeep USB connected until the transfer completes.'),icon='warning',default='cancel',parent=self.root):return
   prepared=self.prepared;self.flashing=True;self.monitoring=False;self.stop_test();self.media_progress['value']=0
   self.submit('Uploading screen media',lambda:upload_media(self.settings_client,prepared,WORK,lambda n,total:self.results.put(('media_progress',n,total))),self.media_uploaded)
  def media_uploaded(self,result):
@@ -691,11 +702,13 @@ class Studio:
    health=estimate(snapshot);self.health=health;self.history.samples[-1]['health']=health;self.trend.add(health['pack_volts_estimate'])
    colour={'no_voltage':PINK,'dead':PINK,'over_discharged':AMBER,'low':AMBER,'ok':MINT}.get(health['state'],MUTED)
    self.volts.set(f"{health['pack_volts_estimate']:.2f} V");self.volts_label.configure(fg=colour);self.draw_gauge(health['pack_volts_estimate']);self.verdict.set(t(health['headline']));self.show_steps([t(step) for step in health['steps']])
+   self.show_battery_warning(health['state'] in ('no_voltage','dead','over_discharged'))
    self.percent.set(f"{health['pack_volts_estimate']:.2f} V")
    self.battery_note.set(t('Read at {stamp}. USB power {power}. Estimate via an inferred 1:2 divider.').format(stamp=stamp,power=t('present' if health['external_power'] else 'absent')))
    self.trend_note.set(self.trend.verdict(health['external_power'])[1] if self.monitoring else '')
   else:
    self.volts.set(f'{value} %' if value is not None else '-- %');self.verdict.set(t('Device-reported level only.'))
+   self.show_battery_warning(False)
    self.battery_note.set(t('Read {stamp} / raw level {level}, status {status}. Voltage is measured only by the 0.6.0 build.').format(stamp=stamp,level=report["level_raw"],status=report["status_raw"]))
   self.next_battery=time.monotonic()+5;self.draw_chart();self.monitor_state()
   self.status.set(t('Battery read complete at {stamp} / {value}.').format(stamp=stamp,value=self.percent.get()))
@@ -719,8 +732,13 @@ class Studio:
   if external and not self.external_firmware:return self.status.set(t('Choose a valid firmware file first.'))
   unreviewed=external and not self.external_firmware[1]['reviewed']
   if unreviewed and not self.allow_unreviewed.get():return self.status.set(t('This binary is unreviewed. Enable the explicit unreviewed-file option before installing.'))
-  notice=t('\n\nThis is YOUR UNREVIEWED CODE. Structural checks do not establish hardware compatibility; recovery may require a programmer.') if unreviewed else ''
-  if not messagebox.askokcancel(t('Install firmware'),t('Install {name}?').format(name=name)+notice+t('\n\nThe official V0113 firmware is downloaded from VGN once if it is not cached yet.\nKeep USB connected in wired mode until verification completes.\nSettings are backed up before writing.'),parent=self.root):return
+  if not self.inventory:return self.status.set(t('Connect the X68 with a USB cable before installing firmware.'))
+  if self.inventory.get('transport')=='wireless':return self.status.set(t('Firmware can only be installed over a USB cable. Set the keyboard switch to wired and plug in the cable.'))
+  danger=[t('This is YOUR UNREVIEWED CODE. Structural checks do not establish hardware compatibility; recovery may require a programmer.')] if unreviewed else []
+  if safety.on_battery_power():danger.append(t('This computer is running on battery. Plug in the charger before you continue.'))
+  intro=t('Install {name}?').format(name=name)+'\n\n'+t('Firmware is the keyboard\'s own internal software; installing replaces it and takes a few minutes.')+t('\n\nThe official V0113 firmware is downloaded from VGN once if it is not cached yet.\nKeep USB connected in wired mode until verification completes.\nSettings are backed up before writing.')
+  checks=[t('The keyboard is connected with a USB cable and its switch is set to wired.'),t('The computer is plugged into power (a laptop is on its charger).'),t('I will not unplug the cable, close this app, or shut down or sleep the computer until it says the installation is complete.'),t('I understand that if the installation is interrupted, the keyboard may stop working and need special hardware to recover.')]
+  if not self.confirm_checklist(t('Install firmware'),intro,checks,t('Install'),'\n'.join(danger)):return
   self.stop_monitor();self.stop_test();self.version=None;self.flashing=True;self.progress['value']=0;self.install_button.configure(state='disabled')
   current_reference=self.external_firmware[0] if self.external_firmware else None
   def flash():
@@ -743,7 +761,7 @@ class Studio:
  def restore(self):
   if self.busy:return
   path=filedialog.askopenfilename(parent=self.root,title=t('Restore X68 settings backup'),filetypes=[(t('JSON backup'),'*.json')])
-  if path:self.submit('Restoring settings backup',lambda:self.settings_client.restore(path),lambda value:self.root.after(100,self.read_settings))
+  if path and messagebox.askokcancel(t('Restore settings backup'),t('Restore this backup?\n\nThe keyboard\'s current lighting, keymap and macros will be replaced with the ones in the backup.'),icon='warning',default='cancel',parent=self.root):self.submit('Restoring settings backup',lambda:self.settings_client.restore(path),lambda value:self.root.after(100,self.read_settings))
  def read_adc_snapshot(self):
   if not self.version:return self.status.set(t('Check the installed version first.'))
   version=dict(self.version)
@@ -779,10 +797,11 @@ class Studio:
    if not self.closed:self.root.after(60,self.pump)
  def _pump_once(self):
   if self.closed:return
+  if self.flashing!=self.awake:self.awake=self.flashing;safety.keep_awake(self.flashing)
   while not self.results.empty():
    item=self.results.get_nowait()
    if item[0]=='firmware_note':self.firmware_note.set(item[1]);continue
-   if item[0]=='progress':self.progress['value']=item[1];self.firmware_note.set(t('Writing packet {done} / {total}').format(done=item[1],total=item[2]));continue
+   if item[0]=='progress':self.progress['value']=item[1];self.firmware_note.set(t('Writing packet {done} / {total}. Do not unplug the keyboard.').format(done=item[1],total=item[2]));continue
    if item[0]=='media_progress':self.media_progress['value']=100*item[1]/item[2];self.media_note.set(t('Uploading {done} / {total} bytes. Keep USB connected.').format(done=f'{item[1]:,}',total=f'{item[2]:,}'));continue
    _,name,result,error,done=item;self.busy=False
    self.logs.append({'time':datetime.now().astimezone().isoformat(),'operation':name,'error':error})
@@ -836,6 +855,28 @@ class Studio:
  def smoke_done(self):
   result={'inventory_loaded':bool(self.inventory),'window_size':[self.root.winfo_width(),self.root.winfo_height()],'pages':list(self.pages),'english_ui':True,'no_automatic_settings_write':True,'firmware_install_requires_click':True}
   (WORK/'reports').mkdir(parents=True,exist_ok=True);(WORK/'reports/gui-smoke.json').write_text(json.dumps(result,indent=2),encoding='utf-8');print(json.dumps(result));self.close()
+ def unreviewed_toggled(self):
+  if self.allow_unreviewed.get() and not messagebox.askyesno(t('Unreviewed firmware'),t('This lets you install a firmware file that nobody has checked. A wrong or broken file can make the keyboard stop working for good, and fixing it needs a hardware programmer.\n\nOnly continue if you know exactly what this file is. Turn this option on?'),icon='warning',default='no',parent=self.root):self.allow_unreviewed.set(False)
+ def confirm_checklist(self,title,intro,checks,confirm,danger=''):
+  """Modal confirmation: the confirm button stays disabled until every statement is ticked. Cancel is the default."""
+  dialog=tk.Toplevel(self.root,bg=BG);dialog.title(title);dialog.transient(self.root);dialog.resizable(False,False)
+  body=tk.Frame(dialog,bg=BG,padx=22,pady=18);body.pack(fill='both',expand=True)
+  tk.Label(body,text='⚠  '+title,font=BIG_BODY,bg=BG,fg=AMBER,anchor='w').pack(anchor='w',pady=(0,10))
+  tk.Label(body,text=intro,font=BODY,bg=BG,fg=INK,wraplength=560,justify='left').pack(anchor='w')
+  if danger:tk.Label(body,text=danger,font=BODY,bg=BG,fg=PINK,wraplength=560,justify='left').pack(anchor='w',pady=(12,0))
+  tk.Label(body,text=t('Tick every box to continue:'),font=BODY,bg=BG,fg=MUTED).pack(anchor='w',pady=(16,6))
+  answer={'ok':False};ticks=[tk.BooleanVar(value=False) for _ in checks]
+  buttons=tk.Frame(body,bg=BG)
+  def update(*args):go.configure(state='normal' if all(v.get() for v in ticks) else 'disabled')
+  for text,var in zip(checks,ticks):tk.Checkbutton(body,text=text,variable=var,command=update,font=BODY,bg=BG,fg=INK,selectcolor=PANEL,activebackground=BG,activeforeground=MINT,wraplength=530,justify='left',anchor='w').pack(anchor='w',fill='x',pady=2)
+  buttons.pack(anchor='e',pady=(18,0))
+  def finish(ok):answer['ok']=ok;dialog.grab_release();dialog.destroy()
+  cancel=PixelButton(buttons,t('Cancel'),lambda:finish(False),bg=BG);cancel.pack(side='left',padx=(0,10))
+  go=PixelButton(buttons,confirm,lambda:finish(True),True,bg=BG);go.pack(side='left');go.configure(state='disabled')
+  dialog.protocol('WM_DELETE_WINDOW',lambda:finish(False));dialog.bind('<Escape>',lambda e:finish(False))
+  dialog.update_idletasks();x=self.root.winfo_rootx()+(self.root.winfo_width()-dialog.winfo_width())//2;y=self.root.winfo_rooty()+(self.root.winfo_height()-dialog.winfo_height())//3
+  dialog.geometry(f'+{max(0,x)}+{max(0,y)}');dialog.grab_set();cancel.focus_set();self.root.wait_window(dialog)
+  return answer['ok']
  def change_language(self):
   chosen=self.language.get()
   if chosen==i18n.LANG:return
@@ -851,7 +892,9 @@ class Studio:
   if self.closed:subprocess.Popen(command,cwd=os.getcwd(),env={**os.environ,'PYINSTALLER_RESET_ENVIRONMENT':'1'})
  def close(self):
   if self.flashing:
-   self.status.set(t('Wait for the device transfer to finish before closing.'));return
+   self.status.set(t('Wait for the device transfer to finish before closing.'))
+   if not self.smoke:messagebox.showwarning(t('Transfer in progress'),t('Do not close the app or unplug the keyboard yet. Closing now could leave the keyboard unusable. Wait until it says the transfer is complete.'),parent=self.root)
+   return
   self.closed=True;self.stop_test()
   if self.monitor:self.monitor.close()
   self.pool.shutdown(wait=False,cancel_futures=True);self.root.destroy()
