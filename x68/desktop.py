@@ -514,22 +514,24 @@ class Studio:
   if preview.exists():
    with Image.open(preview) as source:photo=ImageTk.PhotoImage(source.resize((400,240),Image.Resampling.NEAREST))
    self.photos.append(photo);self.screen_preview.configure(image=photo)
-  f=tk.Frame(left,bg=PANEL);f.pack(fill='x',pady=(12,0))
+  self.single_upload=tk.Frame(left,bg=PANEL);self.single_upload.pack(fill='x')
+  f=tk.Frame(self.single_upload,bg=PANEL);f.pack(fill='x',pady=(12,0))
   self.fit=tk.StringVar(value='Crop');pixel.Choice(f,self.fit,[(v,t(v)) for v in ('Crop','Fit','Stretch')],columns=3).pack(side='left')
   self.fit.trace_add('write',lambda *args:self.reconvert())
-  f=tk.Frame(left,bg=PANEL);f.pack(fill='x',pady=(10,0));self.button(f,t('Choose image / GIF'),self.choose_media);self.button(f,t('Upload'),self.send_media,True)
+  f=tk.Frame(self.single_upload,bg=PANEL);f.pack(fill='x',pady=(10,0));self.button(f,t('Choose image / GIF'),self.choose_media);self.button(f,t('Upload'),self.send_media,True)
   self.media_note=tk.StringVar(value=t('PNG, JPG, GIF, WEBP or BMP. Long GIFs are sampled to 8 frames.'))
-  tk.Label(left,textvariable=self.media_note,font=BODY,bg=PANEL,fg=MINT,wraplength=400,justify='left').pack(anchor='w',pady=(10,6))
+  self.media_note_label=tk.Label(left,textvariable=self.media_note,font=BODY,bg=PANEL,fg=MINT,wraplength=400,justify='left');self.media_note_label.pack(anchor='w',pady=(10,6))
   self.media_progress=ttk.Progressbar(left,maximum=100);self.media_progress.pack(fill='x')
   self._screens(left)
   right=ttk.Frame(p);right.pack(side='left',fill='both',expand=True,padx=(12,0))
   scene=pixel.panel(right,t('SCENE'));scene.pack(fill='x')
   scene_note=tk.Label(scene,text=t('The keyboard screen shows either the clock scene or the image/GIF you upload. A new upload replaces the previous one. Press the button below to go back to the clock scene.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=340,justify='left',anchor='w');scene_note.pack(fill='x',pady=(0,10))
   scene.bind('<Configure>',lambda e:scene_note.configure(wraplength=max(120,e.width-32)))
-  f=tk.Frame(scene,bg=PANEL);f.pack(anchor='w');self.button(f,t('Lavender desktop'),lambda:self.change_screen(0));self.button(f,t('Show my image/GIF'),lambda:self.change_screen(4))
+  f=tk.Frame(scene,bg=PANEL);f.pack(anchor='w');self.button(f,t('Lavender desktop'),lambda:self.change_screen(0));self.show_image_button=self.button(f,t('Show my image/GIF'),lambda:self.change_screen(4))
   self.screen_mode_note=tk.StringVar(value=t('Connect the keyboard to see which screen is showing.'))
   tk.Label(scene,textvariable=self.screen_mode_note,font=BODY,bg=PANEL,fg=MINT,wraplength=880,justify='left',anchor='w').pack(fill='x',pady=(8,0))
-  tk.Label(scene,text=t('The keyboard has 5 screen modes (0-4); Fn + PgUp / PgDn steps through them. On Lavender, modes 0-3 all show the clock scene and mode 4 shows your uploaded image/GIF.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=880,justify='left',anchor='w').pack(fill='x',pady=(4,0))
+  self.screen_modes_note=tk.StringVar(value=t('The keyboard has 5 screen modes (0-4); Fn + PgUp / PgDn steps through them. On Lavender, modes 0-3 all show the clock scene and mode 4 shows your uploaded image/GIF.'))
+  tk.Label(scene,textvariable=self.screen_modes_note,font=BODY,bg=PANEL,fg=MUTED,wraplength=880,justify='left',anchor='w').pack(fill='x',pady=(4,0))
   clock=pixel.panel(right,t('CLOCK'));clock.pack(fill='both',expand=True,pady=(12,0))
   ttk.Checkbutton(clock,text=t('Sync time automatically'),variable=self.auto_clock,command=self.clock_preference,style='Field.TCheckbutton').pack(anchor='w',pady=4)
   f=tk.Frame(clock,bg=PANEL);f.pack(anchor='w',pady=6);tk.Label(f,text=t('Every'),font=BODY,bg=PANEL,fg=INK).pack(side='left')
@@ -569,6 +571,12 @@ class Studio:
   f=tk.Frame(panel,bg=PANEL);f.pack(anchor='w',pady=(8,0));self.screens_button=self.button(f,t('Upload all screens'),self.send_screens,True)
   self.screens_note=tk.StringVar(value='');tk.Label(panel,textvariable=self.screens_note,font=BODY,bg=PANEL,fg=AMBER,wraplength=380,justify='left',anchor='w').pack(fill='x',pady=(6,0))
   self.load_screen_choices()
+ def live_screen_media(self):
+  """(index, media) for the screen the keyboard shows now, when that screen has a picture chosen here."""
+  mode=self.parameter_byte(33)
+  if not mode or not 1<=mode<=SCREENS:return None
+  media=self.screen_slots[mode-1]
+  return (mode-1,media) if media is not None else None
  def screen_frames_used(self,skip=None):
   return sum(len(m.frames) for i,m in enumerate(self.screen_slots) if m is not None and i!=skip)
  def refresh_screen_rows(self):
@@ -582,6 +590,7 @@ class Studio:
   self.frame_budget.set(t('Frames used: {used} / {total}').format(used=self.screen_frames_used(),total=MAX_FRAMES))
   multi=(self.version or {}).get('reported_crc') in MULTI_SCREEN_CRCS
   self.screens_note.set('' if multi else t('Needs Lavender Quest 0.10.0 (experimental) from the Firmware page. On other builds screens 1-3 show the clock.'))
+  if hasattr(self,'show_image_button'):self.screen_layout()
  def save_screen_choices(self):
   self.save_preferences(screens=[None if m is None else {'path':m.source,'fit':m.fit,'frames':len(m.frames)} for m in self.screen_slots])
  def load_screen_choices(self):
@@ -597,17 +606,42 @@ class Studio:
  def choose_screen_media(self,index):
   if self.busy:return
   room=MAX_FRAMES-self.screen_frames_used(skip=index)
-  if room<1:return self.status.set(t('No frames left. Clear another screen first.'))
+  if room<1 and not messagebox.askyesno(t('No frames left'),t('All 8 frames are in use. Share them out evenly between the screens so this one fits too? GIFs keep their timing but use fewer frames. Nothing is sent until you press Upload all screens.'),parent=self.root):return
   path=filedialog.askopenfilename(parent=self.root,title=t('Choose an image or animation'),filetypes=[(t('Images and animations'),'*.png *.jpg *.jpeg *.gif *.webp *.bmp'),(t('All files'),'*.*')])
   if not path:return
   fit=self.slot_fit[index].get()
-  self.submit('Converting image',lambda:convert_media(path,fit,max_frames=room),lambda media:self.screen_media_ready(index,media))
+  if room>=1:
+   return self.submit('Converting image',lambda:convert_media(path,fit,max_frames=room),lambda media:self.screen_media_ready(index,media))
+  filled=sorted({i for i,m in enumerate(self.screen_slots) if m is not None}|{index})
+  quota={i:MAX_FRAMES//len(filled)+(1 if k<MAX_FRAMES%len(filled) else 0) for k,i in enumerate(filled)}
+  jobs=[(i,self.screen_slots[i].source,self.slot_fit[i].get(),quota[i]) for i in filled if i!=index]
+  def work():
+   result={i:convert_media(source,slot_fit,max_frames=q) for i,source,slot_fit,q in jobs}
+   result[index]=convert_media(path,fit,max_frames=quota[index]);return result
+  self.submit('Converting image',work,self.screens_rebalanced)
  def refit_screen_media(self,index):
   """Crop / Fit / Stretch changed for a screen: convert its picture again (nothing is sent)."""
   media=self.screen_slots[index];fit=self.slot_fit[index].get()
   if media is None or media.fit==fit or self.busy:return
   path,frames=media.source,len(media.frames)
   self.submit('Converting image',lambda:convert_media(path,fit,max_frames=frames),lambda result:self.screen_media_ready(index,result))
+ def screens_rebalanced(self,result):
+  for index,media in result.items():self.screen_slots[index]=media
+  self.save_screen_choices();self.refresh_screen_rows()
+  self.status.set(t('Frames shared out between the screens. Nothing has been sent yet; press Upload all screens.'))
+ def is_multi(self):
+  return (self.version or {}).get('reported_crc') in MULTI_SCREEN_CRCS
+ def screen_layout(self):
+  """On 0.10.0 only the separate-screens system is shown; older builds keep the single-image upload."""
+  multi=self.is_multi()
+  if multi:
+   self.single_upload.pack_forget();self.show_image_button.pack_forget()
+   self.screen_modes_note.set(t('The keyboard has 5 screens: 0 is the clock and 1-4 are your screens below. Fn + PgUp / PgDn steps through them; an empty screen shows the clock.'))
+   if not self.flashing:self.media_note.set(t('Choose a picture for each screen below, then press Upload all screens. The preview shows the screen that is on the keyboard now.'))
+  else:
+   if not self.single_upload.winfo_manager():self.single_upload.pack(fill='x',before=self.media_note_label)
+   if not self.show_image_button.winfo_manager():self.show_image_button.pack(side='left',padx=(0,10))
+   self.screen_modes_note.set(t('The keyboard has 5 screen modes (0-4); Fn + PgUp / PgDn steps through them. On Lavender, modes 0-3 all show the clock scene and mode 4 shows your uploaded image/GIF.'))
  def screen_media_ready(self,index,media):
   self.screen_slots[index]=media;self.save_screen_choices();self.refresh_screen_rows()
   self.status.set(t('Screen {n} ready: {count} frames. Nothing has been sent yet.').format(n=index+1,count=len(media.frames)))
@@ -1136,10 +1170,17 @@ class Studio:
   elif self.page_name in ('Keymap','Advanced'):self.draw_boards(time.monotonic())
   if self.page_name in self.scrollers:self.scrollers[self.page_name][2]()
   if self.page_name=='Firmware':self.draw_lcd_preview()
-  if self.page_name=='Screen' and not self.media_photos and self.lavender_build():
+  live=self.live_screen_media() if self.page_name=='Screen' and self.is_multi() else None
+  if live is not None:
+   index,media=live;now=time.monotonic()
+   if getattr(self,'live_key',None)!=(index,id(media)):
+    self.live_key=(index,id(media));self.live_photos=[ImageTk.PhotoImage(frame.resize((400,240),Image.Resampling.NEAREST)) for frame in media.frames];self.live_frame=0;self.live_due=0
+   if now>=self.live_due:
+    self.screen_preview.configure(image=self.live_photos[self.live_frame]);self.live_frame=(self.live_frame+1)%len(self.live_photos);self.live_due=now+media.period_ms/1000
+  elif self.page_name=='Screen' and (self.is_multi() or not self.media_photos) and self.lavender_build():
    phase=int(time.monotonic()*4)
    if phase!=getattr(self,'screen_phase',None):self.screen_phase=phase;self.screen_photo=self.lcd_frame(self.lavender_build(),datetime.now(),phase);self.screen_preview.configure(image=self.screen_photo)
-  if self.page_name=='Screen' and self.media_photos and time.monotonic()>=self.media_due:
+  if self.page_name=='Screen' and not self.is_multi() and self.media_photos and time.monotonic()>=self.media_due:
    self.screen_preview.configure(image=self.media_photos[self.media_frame]);self.media_frame=(self.media_frame+1)%len(self.media_photos);self.media_due=time.monotonic()+self.prepared.period_ms/1000
   self.root.after(50 if self.page_name in ('Screen','Lighting','Firmware') else 130,self.animate)
  def smoke_done(self):

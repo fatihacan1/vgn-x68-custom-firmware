@@ -539,6 +539,17 @@ TR = {
     'Experimental. The same screen as 0.9.2, plus screens 1-4 can each show their own image or GIF (Screen page). Built and emulator-tested in this fork; not yet reviewed by the original author.':
         'Deneysel. 0.9.2 ile aynı ekran; ek olarak 1-4. ekranların her biri kendi resmini veya GIF\'ini gösterebilir (Ekran sayfası). Bu fork\'ta derlendi ve emülatörde test edildi; orijinal geliştirici henüz incelemedi.',
 
+    # Screen page on 0.10.0
+    'No frames left': 'Boş kare kalmadı',
+    'All 8 frames are in use. Share them out evenly between the screens so this one fits too? GIFs keep their timing but use fewer frames. Nothing is sent until you press Upload all screens.':
+        '8 karenin hepsi kullanılıyor. Bu ekran da sığsın diye kareler ekranlara eşit paylaştırılsın mı? GIF\'ler zamanlamasını korur ama daha az kare kullanır. Tüm ekranları yükle\'ye basana kadar hiçbir şey gönderilmez.',
+    'Frames shared out between the screens. Nothing has been sent yet; press Upload all screens.':
+        'Kareler ekranlara paylaştırıldı. Henüz hiçbir şey gönderilmedi; Tüm ekranları yükle\'ye basın.',
+    'The keyboard has 5 screens: 0 is the clock and 1-4 are your screens below. Fn + PgUp / PgDn steps through them; an empty screen shows the clock.':
+        'Klavyede 5 ekran var: 0 saat, 1-4 aşağıdaki sizin ekranlarınız. Fn + PgUp / PgDn aralarında sırayla gezer; boş ekran saati gösterir.',
+    'Choose a picture for each screen below, then press Upload all screens. The preview shows the screen that is on the keyboard now.':
+        'Aşağıda her ekran için bir resim seçin, sonra Tüm ekranları yükle\'ye basın. Önizleme klavyede şu an açık olan ekranı gösterir.',
+
     # Background operations (shown as "<name>..." and "<name> complete.")
     '{operation} complete.': '{operation} tamamlandı.',
     '{operation} is still running. Please wait.': '{operation} hâlâ sürüyor. Lütfen bekleyin.',

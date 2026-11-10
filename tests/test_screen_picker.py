@@ -1,6 +1,8 @@
 """Screen picker: shows the active screen mode and only switches to the image when one was uploaded."""
 import tkinter as tk, unittest
-from unittest.mock import Mock
+from pathlib import Path
+from unittest.mock import Mock, patch
+from x68.firmware import MULTI_SCREEN_CRC
 
 
 def block(mode, frames):
@@ -56,6 +58,53 @@ class ScreenPickerTests(unittest.TestCase):
         a.slot_fit[0].set('Fit'); a.submit.assert_not_called()  # empty screen: nothing to convert
         a.slot_fit[1].set('Stretch'); a.submit.assert_called_once()
         self.assertEqual(a.submit.call_args.args[0], 'Converting image')
+
+    def gif(self, folder, name, frames):
+        from PIL import Image
+        path = Path(folder) / name
+        images = [Image.new('RGB', (160, 96), (i * 40, 0, 0)) for i in range(frames)]
+        images[0].save(path, save_all=True, append_images=images[1:], duration=100, loop=0)
+        return str(path)
+
+    def test_multi_build_shows_one_upload_system(self):
+        a = self.app; a.version = {'reported_crc': MULTI_SCREEN_CRC}; a.refresh_screen_rows()
+        self.assertEqual(a.single_upload.winfo_manager(), ''); self.assertEqual(a.show_image_button.winfo_manager(), '')
+        self.assertIn('0 is the clock', a.screen_modes_note.get())
+        a.version = {'reported_crc': '5B2F5C6D'}; a.refresh_screen_rows()
+        self.assertEqual(a.single_upload.winfo_manager(), 'pack'); self.assertEqual(a.show_image_button.winfo_manager(), 'pack')
+
+    def test_full_frame_budget_is_shared_out_on_request(self):
+        import tempfile
+        from x68.media import convert_media
+        a = self.app; a.save_preferences = Mock(); a.screen_slots = [None] * 4
+        a.submit = lambda name, work, done: done(work())
+        with tempfile.TemporaryDirectory() as folder:
+            a.screen_slots[0] = convert_media(self.gif(folder, 'a.gif', 4), 'Crop', max_frames=4)
+            a.screen_slots[1] = convert_media(self.gif(folder, 'b.gif', 4), 'Crop', max_frames=4)
+            new = self.gif(folder, 'c.gif', 4)
+            with patch('x68.desktop.messagebox.askyesno', return_value=True) as ask, patch('x68.desktop.filedialog.askopenfilename', return_value=new):
+                a.choose_screen_media(2)
+            ask.assert_called_once()
+            self.assertEqual([len(m.frames) for m in a.screen_slots[:3]], [3, 3, 2])
+            self.assertLessEqual(a.screen_frames_used(), 8)
+
+    def test_declining_the_share_changes_nothing(self):
+        from x68.media import PreparedMedia
+        from PIL import Image
+        a = self.app; a.save_preferences = Mock(); full = PreparedMedia('x.gif', [Image.new('RGB', (160, 96))] * 8, 100, 8, 800, 'Crop')
+        a.screen_slots = [full, None, None, None]
+        with patch('x68.desktop.messagebox.askyesno', return_value=False), patch('x68.desktop.filedialog.askopenfilename') as pick:
+            a.choose_screen_media(1)
+        pick.assert_not_called(); self.assertIs(a.screen_slots[0], full)
+
+    def test_preview_follows_the_screen_on_the_keyboard(self):
+        from x68.media import PreparedMedia
+        from PIL import Image
+        a = self.app; a.version = {'reported_crc': MULTI_SCREEN_CRC}
+        media = PreparedMedia('x.gif', [Image.new('RGB', (160, 96))], 100, 1, 100, 'Crop'); a.screen_slots = [None, media, None, None]
+        a.settings = block(2, 1); self.assertEqual(a.live_screen_media(), (1, media))
+        a.settings = block(3, 1); self.assertIsNone(a.live_screen_media())
+        a.settings = block(0, 1); self.assertIsNone(a.live_screen_media())
 
 if __name__ == '__main__':
     unittest.main()
