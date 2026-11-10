@@ -40,7 +40,7 @@ LCD_LEGEND=['Top-left logo and WIN/MAC: the keyboard\'s Windows or Mac mode. Fn 
             'Battery at the bottom: the battery level the keyboard reports.',
             'X68.EXE, CLOCK, DAY-MO, START and READY: decorative pixel-game text. They have no function.',
             'The bunny blinks and the coin spins: animation only.',
-            'Fn + PgUp steps through the screen modes. On Lavender the first modes all show this same clock scene and the last one shows your uploaded image/GIF, so press it a few times until your image appears. The Screen page buttons switch directly.']
+            'Fn + PgUp steps through the screen modes 0-4. On 0.10.0 screen 0 is the clock and screens 1-4 each show their own image (an empty one shows the clock). On older builds modes 0-3 all show the clock and mode 4 shows your image. The Screen page buttons switch directly.']
 # Ready-made macros for the Macros page (name, script). Every key here is in settings.HID_KEYS/MODIFIERS.
 MACRO_EXAMPLES=[('Copy and paste','CTRL+C\nWAIT 150\nCTRL+V'),('Select all and copy','CTRL+A\nWAIT 50\nCTRL+C'),
                 ('Screenshot of an area','WIN+SHIFT+S'),('Task Manager','CTRL+SHIFT+ESC'),('Show the desktop','WIN+D'),
@@ -551,12 +551,16 @@ class Studio:
   panel=pixel.panel(parent,t('SEPARATE SCREENS'));panel.pack(fill='x',pady=(14,0))
   tk.Label(panel,text=t('With Lavender Quest 0.10.0, screens 1-4 each show their own image or GIF and Fn + PgUp steps through them. Screen 0 is always the clock. All screens share 8 frames.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=380,justify='left',anchor='w').pack(fill='x')
   self.screen_slots=[None]*SCREENS;self.slot_thumbs=[None]*SCREENS;self.slot_info=[];self.slot_images=[]
+  self.slot_fit=[tk.StringVar(value='Crop') for _ in range(SCREENS)]
   for index in range(SCREENS):
    row=tk.Frame(panel,bg=PANEL);row.pack(fill='x',pady=(8,0))
    tk.Label(row,text=t('Screen {n}').format(n=index+1),font=BODY,bg=PANEL,fg=INK,anchor='w',width=8).pack(side='left')
    image=tk.Label(row,bg=pixel.DESK,width=10,height=3);image.pack(side='left',padx=(0,8));self.slot_images.append(image)
    info=tk.StringVar(value=t('empty'));self.slot_info.append(info)
    tk.Label(row,textvariable=info,font=BODY,bg=PANEL,fg=MUTED,anchor='w',width=9).pack(side='left')
+   fit=tk.Frame(panel,bg=PANEL);fit.pack(fill='x',pady=(4,0))
+   pixel.Choice(fit,self.slot_fit[index],[(v,t(v)) for v in ('Crop','Fit','Stretch')],columns=3).pack(side='left')
+   self.slot_fit[index].trace_add('write',lambda *args,n=index:self.refit_screen_media(n))
    buttons=tk.Frame(panel,bg=PANEL);buttons.pack(fill='x',pady=(4,0))
    self.button(buttons,t('Choose'),lambda n=index:self.choose_screen_media(n))
    self.button(buttons,t('Clear'),lambda n=index:self.clear_screen_media(n))
@@ -585,6 +589,7 @@ class Studio:
   except (OSError,ValueError):preferences={}
   for index,entry in enumerate((preferences.get('screens') or [])[:SCREENS]):
    if not entry:continue
+   if entry.get('fit') in ('Crop','Fit','Stretch'):self.slot_fit[index].set(entry['fit'])
    try:self.screen_slots[index]=convert_media(entry['path'],entry.get('fit','Crop'),max_frames=max(1,min(MAX_FRAMES,int(entry.get('frames',MAX_FRAMES)))))
    except (OSError,ValueError,KeyError):self.screen_slots[index]=None
   if self.screen_frames_used()>MAX_FRAMES:self.screen_slots=[None]*SCREENS
@@ -595,8 +600,14 @@ class Studio:
   if room<1:return self.status.set(t('No frames left. Clear another screen first.'))
   path=filedialog.askopenfilename(parent=self.root,title=t('Choose an image or animation'),filetypes=[(t('Images and animations'),'*.png *.jpg *.jpeg *.gif *.webp *.bmp'),(t('All files'),'*.*')])
   if not path:return
-  fit=self.fit.get()
+  fit=self.slot_fit[index].get()
   self.submit('Converting image',lambda:convert_media(path,fit,max_frames=room),lambda media:self.screen_media_ready(index,media))
+ def refit_screen_media(self,index):
+  """Crop / Fit / Stretch changed for a screen: convert its picture again (nothing is sent)."""
+  media=self.screen_slots[index];fit=self.slot_fit[index].get()
+  if media is None or media.fit==fit or self.busy:return
+  path,frames=media.source,len(media.frames)
+  self.submit('Converting image',lambda:convert_media(path,fit,max_frames=frames),lambda result:self.screen_media_ready(index,result))
  def screen_media_ready(self,index,media):
   self.screen_slots[index]=media;self.save_screen_choices();self.refresh_screen_rows()
   self.status.set(t('Screen {n} ready: {count} frames. Nothing has been sent yet.').format(n=index+1,count=len(media.frames)))

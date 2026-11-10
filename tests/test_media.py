@@ -88,8 +88,9 @@ class MultiScreenTests(unittest.TestCase):
   self.assertEqual(b''.join(p[8:8+p[4]] for p in client.packets),slots[0].data+slots[2].data)
   final=client.writes[-1]
   self.assertEqual(final[33],3);self.assertEqual(final[45:48],b'XS')
+  self.assertEqual(final[34],3)  # non-zero, so stock Fn+PgUp also reaches screen 4
   self.assertEqual(final[48:64],bytes([0,1,100,0, 0,0,0,0, 1,2,150,0, 0,0,0,0]))
-  for i in set(range(64))-{33}-set(range(45,64)):self.assertEqual(final[i],client.before[i])
+  for i in set(range(64))-{33,34}-set(range(45,64)):self.assertEqual(final[i],client.before[i])
  def test_upload_refused_without_the_multi_screen_build(self):
   client=MemoryMedia(crc=LIVE_CLOCK_CRC)
   with tempfile.TemporaryDirectory() as folder:

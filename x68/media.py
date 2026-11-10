@@ -149,6 +149,9 @@ def screen_table(slots):
 def screen_parameters(before,table,show):
     """The parameter block with the screen table written and screen `show` selected."""
     desired=bytearray(before);desired[33]=show;desired[45:48]=SCREEN_MAGIC
+    # Stock Fn+PgUp/PgDn (V0113 20012128..2001214C, 200123D8) only reaches mode 4 while
+    # parameter 34 is non-zero; with the table present Lavender itself ignores 34.
+    desired[34]=sum(entry[1] for entry in table if entry)
     for index,entry in enumerate(table):
         first,count,period=entry or (0,0,0)
         desired[48+index*4:52+index*4]=bytes([first,count])+period.to_bytes(2,'little')

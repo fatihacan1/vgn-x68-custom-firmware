@@ -498,8 +498,8 @@ TR = {
     'X68.EXE, CLOCK, DAY-MO, START and READY: decorative pixel-game text. They have no function.':
         'X68.EXE, CLOCK, DAY-MO, START ve READY: piksel oyun havası veren süs yazıları. Bir işlevleri yok.',
     'The bunny blinks and the coin spins: animation only.': 'Tavşanın göz kırpması ve dönen altın para: yalnızca animasyon.',
-    'Fn + PgUp steps through the screen modes. On Lavender the first modes all show this same clock scene and the last one shows your uploaded image/GIF, so press it a few times until your image appears. The Screen page buttons switch directly.':
-        "Fn + PgUp ekran modları arasında sırayla gezer. Lavender'da ilk modların hepsi bu saat sahnesini, sonuncusu ise yüklediğiniz resmi/GIF'i gösterir; resminiz gelene kadar birkaç kez basın. Ekran sayfasındaki düğmeler doğrudan geçiş yapar.",
+    'Fn + PgUp steps through the screen modes 0-4. On 0.10.0 screen 0 is the clock and screens 1-4 each show their own image (an empty one shows the clock). On older builds modes 0-3 all show the clock and mode 4 shows your image. The Screen page buttons switch directly.':
+        "Fn + PgUp 0-4 arası ekran modlarında sırayla gezer. 0.10.0'da 0. ekran saattir, 1-4. ekranların her biri kendi resmini gösterir (boş olan saati gösterir). Eski sürümlerde 0-3 arası modların hepsi saati, 4. mod resminizi gösterir. Ekran sayfasındaki düğmeler doğrudan geçiş yapar.",
 
     # Screen picker
     'Show my image/GIF': 'Resmimi göster',

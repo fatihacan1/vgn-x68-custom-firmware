@@ -47,5 +47,15 @@ class ScreenPickerTests(unittest.TestCase):
         a.submit.assert_called_once()
 
 
+    def test_each_screen_has_its_own_fit_and_changing_it_reconverts(self):
+        from PIL import Image
+        from x68.media import PreparedMedia
+        a = self.app; a.save_preferences = Mock(); a.screen_slots = [None] * 4  # ignore choices saved on this PC
+        a.screen_media_ready(1, PreparedMedia('sample.png', [Image.new('RGB', (160, 96))], 100, 1, 100, 'Crop'))
+        a.submit.reset_mock()
+        a.slot_fit[0].set('Fit'); a.submit.assert_not_called()  # empty screen: nothing to convert
+        a.slot_fit[1].set('Stretch'); a.submit.assert_called_once()
+        self.assertEqual(a.submit.call_args.args[0], 'Converting image')
+
 if __name__ == '__main__':
     unittest.main()
