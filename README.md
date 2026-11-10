@@ -40,12 +40,17 @@ Plug the keyboard in with a USB cable and set its mode switch to wired. The app 
 | **Knowledge** | Everything we verified about the X68, ready to copy into an AI chat or export |
 | **Advanced** | Raw packets, settings backups and restore, and a key tester |
 
+## Language
+
+The interface is available in **English** and **Turkish (Türkçe)**. Pick one under **LANGUAGE** in the left column; the app offers to restart so the change takes effect. On first launch it follows the Windows display language. Translations live in `x68/i18n.py` with the English text as keys, so a missing translation falls back to English. Logs, backups, exported JSON and the Knowledge page stay in English.
+
 ## How it stays safe
 
 - **Nothing is written until you press Send.** Picking keys, colours, effects or files only changes the preview.
 - **Every write is backed up and read back.** Lighting, keymap and macro writes save a JSON backup first, then the app reads the keyboard again and compares. Any backup can be restored from Advanced.
 - **The keyboard is identified exactly.** Vendor and product IDs, names, interface and the full HID report descriptor must all match before a single command is sent. Similar keyboards are refused.
 - **No blind retries.** If a packet is short or a reply is missing, the app stops and tells you. It does not resend.
+- **Plain-language warnings before anything risky.** Installing firmware needs a USB cable (the 2.4 GHz receiver is refused) and a checklist the user must tick: wired connection, mains power, no unplugging or sleeping, and what an interruption can do. The app warns when a laptop is on battery and keeps Windows awake while a transfer runs. Restoring a backup, replacing the LCD animation and enabling unreviewed firmware each ask first, and the battery jump-start steps carry a lithium safety warning.
 - **Unknown firmware needs an explicit opt-in.** Size, header and CRC checks are not treated as proof that a file is safe.
 
 ## Firmware
