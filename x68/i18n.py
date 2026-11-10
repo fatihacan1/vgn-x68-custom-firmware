@@ -502,7 +502,7 @@ TR = {
         "Fn + PgUp ekran modları arasında sırayla gezer. Lavender'da ilk modların hepsi bu saat sahnesini, sonuncusu ise yüklediğiniz resmi/GIF'i gösterir; resminiz gelene kadar birkaç kez basın. Ekran sayfasındaki düğmeler doğrudan geçiş yapar.",
 
     # Screen picker
-    'Show my image/GIF': 'Resmimi/GIF\'imi göster',
+    'Show my image/GIF': 'Resmimi göster',
     'Connect the keyboard to see which screen is showing.': 'Hangi ekranın açık olduğunu görmek için klavyeyi bağlayın.',
     'The keyboard has 5 screen modes (0-4); Fn + PgUp / PgDn steps through them. On Lavender, modes 0-3 all show the clock scene and mode 4 shows your uploaded image/GIF.':
         'Klavyede 5 ekran modu var (0-4); Fn + PgUp / PgDn bunlar arasında sırayla gezer. Lavender\'da 0-3 arası modların hepsi saat sahnesini, 4. mod ise yüklediğiniz resmi/GIF\'i gösterir.',
@@ -511,6 +511,33 @@ TR = {
     'Showing now: screen {mode} - {what}': 'Şu an açık: {mode}. ekran - {what}',
     'your image/GIF': 'sizin resminiz/GIF\'iniz',
     'clock scene': 'saat sahnesi',
+
+    # Separate screens (0.10.0)
+    'SEPARATE SCREENS': 'AYRI EKRANLAR',
+    'With Lavender Quest 0.10.0, screens 1-4 each show their own image or GIF and Fn + PgUp steps through them. Screen 0 is always the clock. All screens share 8 frames.':
+        'Lavender Quest 0.10.0 ile 1-4. ekranların her biri kendi resmini veya GIF\'ini gösterir; Fn + PgUp aralarında gezer. 0. ekran her zaman saattir. Tüm ekranlar toplam 8 kareyi paylaşır.',
+    'Screen {n}': 'Ekran {n}',
+    'empty': 'boş',
+    '{count} frames': '{count} kare',
+    'Choose': 'Seç',
+    'Clear': 'Temizle',
+    'Show': 'Göster',
+    'Frames used: {used} / {total}': 'Kullanılan kare: {used} / {total}',
+    'Upload all screens': 'Tüm ekranları yükle',
+    'Needs Lavender Quest 0.10.0 (experimental) from the Firmware page. On other builds screens 1-3 show the clock.':
+        'Firmware sayfasından Lavender Quest 0.10.0 (deneysel) gerekir. Diğer sürümlerde 1-3. ekranlar saati gösterir.',
+    'No frames left. Clear another screen first.': 'Boş kare kalmadı. Önce başka bir ekranı temizleyin.',
+    'Screen {n} ready: {count} frames. Nothing has been sent yet.': '{n}. ekran hazır: {count} kare. Henüz hiçbir şey gönderilmedi.',
+    'Choose an image for at least one screen.': 'En az bir ekran için resim seçin.',
+    'Upload all four screens now?\n\nThis replaces every image on the keyboard, including a single image uploaded earlier. Keep USB connected until it finishes.':
+        'Dört ekran şimdi yüklensin mi?\n\nBu, klavyedeki tüm resimlerin yerine geçer; daha önce tek başına yüklenen resim de dahil. Bitene kadar USB bağlı kalsın.',
+    'All screens uploaded. Screen {n} is showing; use the Show buttons or Fn + PgUp to switch.':
+        'Tüm ekranlar yüklendi. Şu an {n}. ekran açık; geçmek için Göster düğmelerini veya Fn + PgUp\'ı kullanın.',
+    'screen {n} image/GIF': '{n}. ekranın resmi/GIF\'i',
+    'Screen {n} is empty on the keyboard; it shows the clock. Upload screens first.': '{n}. ekran klavyede boş, saati gösteriyor. Önce ekranları yükleyin.',
+    'Uploading screens': 'Ekranlar yükleniyor',
+    'Experimental. The same screen as 0.9.2, plus screens 1-4 can each show their own image or GIF (Screen page). Built and emulator-tested in this fork; not yet reviewed by the original author.':
+        'Deneysel. 0.9.2 ile aynı ekran; ek olarak 1-4. ekranların her biri kendi resmini veya GIF\'ini gösterebilir (Ekran sayfası). Bu fork\'ta derlendi ve emülatörde test edildi; orijinal geliştirici henüz incelemedi.',
 
     # Background operations (shown as "<name>..." and "<name> complete.")
     '{operation} complete.': '{operation} tamamlandı.',
