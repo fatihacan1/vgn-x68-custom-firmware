@@ -501,6 +501,17 @@ TR = {
     'Fn + PgUp steps through the screen modes. On Lavender the first modes all show this same clock scene and the last one shows your uploaded image/GIF, so press it a few times until your image appears. The Screen page buttons switch directly.':
         "Fn + PgUp ekran modları arasında sırayla gezer. Lavender'da ilk modların hepsi bu saat sahnesini, sonuncusu ise yüklediğiniz resmi/GIF'i gösterir; resminiz gelene kadar birkaç kez basın. Ekran sayfasındaki düğmeler doğrudan geçiş yapar.",
 
+    # Screen picker
+    'Show my image/GIF': 'Resmimi/GIF\'imi göster',
+    'Connect the keyboard to see which screen is showing.': 'Hangi ekranın açık olduğunu görmek için klavyeyi bağlayın.',
+    'The keyboard has 5 screen modes (0-4); Fn + PgUp / PgDn steps through them. On Lavender, modes 0-3 all show the clock scene and mode 4 shows your uploaded image/GIF.':
+        'Klavyede 5 ekran modu var (0-4); Fn + PgUp / PgDn bunlar arasında sırayla gezer. Lavender\'da 0-3 arası modların hepsi saat sahnesini, 4. mod ise yüklediğiniz resmi/GIF\'i gösterir.',
+    'Upload an image or GIF first; there is nothing to show yet.': 'Önce bir resim veya GIF yükleyin; henüz gösterilecek bir şey yok.',
+    'Your image/GIF is now on the keyboard screen.': 'Resminiz/GIF\'iniz şu an klavye ekranında.',
+    'Showing now: screen {mode} - {what}': 'Şu an açık: {mode}. ekran - {what}',
+    'your image/GIF': 'sizin resminiz/GIF\'iniz',
+    'clock scene': 'saat sahnesi',
+
     # Background operations (shown as "<name>..." and "<name> complete.")
     '{operation} complete.': '{operation} tamamlandı.',
     '{operation} is still running. Please wait.': '{operation} hâlâ sürüyor. Lütfen bekleyin.',

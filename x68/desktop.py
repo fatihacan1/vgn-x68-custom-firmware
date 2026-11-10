@@ -524,7 +524,10 @@ class Studio:
   scene=pixel.panel(right,t('SCENE'));scene.pack(fill='x')
   scene_note=tk.Label(scene,text=t('The keyboard screen shows either the clock scene or the image/GIF you upload. A new upload replaces the previous one. Press the button below to go back to the clock scene.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=340,justify='left',anchor='w');scene_note.pack(fill='x',pady=(0,10))
   scene.bind('<Configure>',lambda e:scene_note.configure(wraplength=max(120,e.width-32)))
-  f=tk.Frame(scene,bg=PANEL);f.pack(anchor='w');self.button(f,t('Lavender desktop'),lambda:self.change_screen(0))
+  f=tk.Frame(scene,bg=PANEL);f.pack(anchor='w');self.button(f,t('Lavender desktop'),lambda:self.change_screen(0));self.button(f,t('Show my image/GIF'),lambda:self.change_screen(4))
+  self.screen_mode_note=tk.StringVar(value=t('Connect the keyboard to see which screen is showing.'))
+  tk.Label(scene,textvariable=self.screen_mode_note,font=BODY,bg=PANEL,fg=MINT,wraplength=880,justify='left',anchor='w').pack(fill='x',pady=(8,0))
+  tk.Label(scene,text=t('The keyboard has 5 screen modes (0-4); Fn + PgUp / PgDn steps through them. On Lavender, modes 0-3 all show the clock scene and mode 4 shows your uploaded image/GIF.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=880,justify='left',anchor='w').pack(fill='x',pady=(4,0))
   self.lcd_legend(scene,PANEL)
   clock=pixel.panel(right,t('CLOCK'));clock.pack(fill='both',expand=True,pady=(12,0))
   ttk.Checkbutton(clock,text=t('Sync time automatically'),variable=self.auto_clock,command=self.clock_preference,style='Field.TCheckbutton').pack(anchor='w',pady=4)
@@ -602,8 +605,19 @@ class Studio:
  def change_screen(self,mode):
   wireless=bool(self.inventory and self.inventory.get('transport')=='wireless')
   if not wireless and (not self.version or self.version.get('reported_crc') not in LIVE_CLOCK_CRCS):return self.status.set(t('Install Lavender Quest 0.6.0 first.'))
-  self.submit('Selecting screen',lambda:set_screen(self.settings_client,mode),lambda result:self.screen_changed())
- def screen_changed(self):self.next_clock_sync=0;self.status.set(t('Lavender desktop selected.'))
+  if mode==4 and self.parameter_byte(34) in (0,None):return self.status.set(t('Upload an image or GIF first; there is nothing to show yet.'))
+  self.submit('Selecting screen',lambda:set_screen(self.settings_client,mode),lambda result:self.screen_changed(mode))
+ def screen_changed(self,mode=0):
+  self.next_clock_sync=0;self.status.set(t('Lavender desktop selected.') if mode==0 else t('Your image/GIF is now on the keyboard screen.'))
+  self.show_screen_mode(mode)
+ def parameter_byte(self,index):
+  """A byte of the keyboard's parameter block as last read (None before the first read)."""
+  raw=((self.settings or {}).get('lighting') or {}).get('raw_hex')
+  return bytes.fromhex(raw.replace(' ',''))[index] if raw else None
+ def show_screen_mode(self,mode=None):
+  mode=self.parameter_byte(33) if mode is None else mode
+  if mode is None:return
+  self.screen_mode_note.set(t('Showing now: screen {mode} - {what}').format(mode=mode,what=t('your image/GIF') if mode==4 else t('clock scene')))
  def clock_preference(self):
   WORK.mkdir(parents=True,exist_ok=True);self.save_preferences(auto_clock=self.auto_clock.get(),clock_interval_minutes=int(self.clock_interval.get()));self.next_clock_sync=0
  def clock_format_preference(self):
@@ -703,7 +717,7 @@ class Studio:
   self.editable=[k for k in result['keys'] if k['editable']]
   self.source_combo.configure(values=[t('Cell')+f" {k['index']:03d}  /  {k['name']}" for k in self.editable])
   self.update_selection()
-  self.lighting_changed();self.refresh_macro_keys()
+  self.lighting_changed();self.refresh_macro_keys();self.show_screen_mode()
   self.status.set(t('Settings loaded. Nothing is written until you press Send.'));self.next_clock_sync=0;self.draw_boards();self.slot_choice.refresh()
   if not self.version:self.read_version()
  def read_version(self):self.submit('Checking installed build',self.client.query_version,self.show_version)
