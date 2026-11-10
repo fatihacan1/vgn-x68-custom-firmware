@@ -13,7 +13,7 @@ from .firmware import LIVE_CLOCK_CRC, LIVE_CLOCK_CRCS, BATTERY_DIAGNOSTIC_CRC, B
 from .media import convert_media, upload_media, set_screen
 from . import autostart, firmware_source, safety
 from PIL import Image, ImageTk, ImageOps
-from . import pixel, i18n, effects
+from . import pixel, i18n, effects, lcd_preview
 from .i18n import t
 from .pixel import PixelButton, window, BODY, BIG_BODY, LABEL, HEAD, TITLE, HUGE
 
@@ -26,6 +26,20 @@ PAGES=['Home','Lighting','Keymap','Macros','Screen','Battery','Firmware','Knowle
 # Builds are produced locally from the official payload; see firmware_source.
 BUILDS=list(firmware_source.BUILDS)
 CACHE=WORK/'firmware-cache'
+# What each Lavender Quest build gives you (cumulative; newest first in the list).
+BUILD_NOTES={'lavender-quest-0.9.2':'Newest, recommended. Windows logo (four colours) or Apple logo, a WIN/MAC chip and a padlock that shows the Windows-key lock. Includes everything from the older builds.',
+             'lavender-quest-0.9.1':'Windows/Apple logo and padlock badges (cyan Windows logo with a coloured rail). Includes everything from the older builds.',
+             'lavender-quest-0.9.0':'Header shows WIN/MAC and L:ON/L:OFF as text. Includes everything from the older builds.',
+             'lavender-quest-0.8.0':'Adds the 12-hour AM/PM clock. Includes everything from the older builds.',
+             'lavender-quest-0.6.0':'Adds the real battery voltage on the Battery page. The screen looks the same as 0.5.1.',
+             'lavender-quest-0.5.1':'First stable build: purple pixel scene, clock set from the computer, image/GIF player and a battery badge on the screen.'}
+LCD_LEGEND=['Top-left logo and WIN/MAC: the keyboard\'s Windows or Mac mode. Fn + A switches to Windows, Fn + S to Mac (0.9.0 and newer).',
+            'Padlock at the top right: the Windows-key lock, so the Windows key cannot interrupt a game. Fn + Windows key turns it on or off. Gold and closed = locked, green and open = unlocked.',
+            'Big clock and DD/MM date: set from this computer (Screen page > Clock). They keep running when the app is closed, until the keyboard loses power.',
+            'Battery at the bottom: the battery level the keyboard reports.',
+            'X68.EXE, CLOCK, DAY-MO, START and READY: decorative pixel-game text. They have no function.',
+            'The bunny blinks and the coin spins: animation only.',
+            'Fn + PgUp steps through the screen modes. On Lavender the first modes all show this same clock scene and the last one shows your uploaded image/GIF, so press it a few times until your image appears. The Screen page buttons switch directly.']
 # Ready-made macros for the Macros page (name, script). Every key here is in settings.HID_KEYS/MODIFIERS.
 MACRO_EXAMPLES=[('Copy and paste','CTRL+C\nWAIT 150\nCTRL+V'),('Select all and copy','CTRL+A\nWAIT 50\nCTRL+C'),
                 ('Screenshot of an area','WIN+SHIFT+S'),('Task Manager','CTRL+SHIFT+ESC'),('Show the desktop','WIN+D'),
@@ -61,6 +75,7 @@ class Studio:
   self.inventory=None;self.settings=None;self.version=None;self.logs=[];self.monitor=None
   self.awake=False
   self.history=BatteryHistory();self.monitoring=False;self.next_battery=0;self.test_until=0;self.pressed=set();self.counts={}
+  self.lcd_backgrounds={};self.lcd_build=None;self.lcd_phase=None
   self.selected=None;self.paint={};self.keyboxes={};self.page_name='Lighting';self.photos=[];self.scrollers={}
   self.pending_mapping={};self.external_firmware=None;self.operation='';self.operation_started=0;self.needs_battery_read=False
   self.prepared=None;self.media_photos=[];self.media_frame=0;self.media_due=0;self.next_clock_sync=0;self.next_reconnect=float('inf')
@@ -418,6 +433,8 @@ class Studio:
   info=ttk.Frame(f);info.pack(side='left',fill='both',expand=True)
   self.preview_title=tk.StringVar();ttk.Label(info,textvariable=self.preview_title,font=HEAD).pack(anchor='w',pady=10)
   self.preview_note=tk.StringVar();ttk.Label(info,textvariable=self.preview_note,style='Muted.TLabel',wraplength=350).pack(anchor='w')
+  self.lcd_caption=tk.StringVar();tk.Label(p,textvariable=self.lcd_caption,font=BODY,bg=BG,fg=MINT,wraplength=880,justify='left',anchor='w').pack(fill='x')
+  self.lcd_legend(p,BG)
   self.installed=tk.StringVar(value=t('Installed build: not checked'));ttk.Label(p,textvariable=self.installed,foreground=MINT).pack(anchor='w',pady=(16,8))
   self.build=tk.StringVar(value=BUILDS[0]);self.build_combo=ttk.Combobox(p,textvariable=self.build,values=BUILDS,state='readonly',width=44);self.build_combo.pack(anchor='w',pady=8)
   self.build.trace_add('write',lambda *args:self.update_firmware_preview())
@@ -433,13 +450,40 @@ class Studio:
  def update_firmware_preview(self):
   name=self.build.get();original=name=='Original V0113';external=name.startswith(t('Selected file:'))
   self.preview_title.set(t('ORIGINAL V0113' if original else ('YOUR FIRMWARE' if external else 'X68 PIXEL DESKTOP')))
-  self.preview_note.set(t('VGN\'s factory firmware, unchanged. Use it to roll back.') if original else (t('No trusted visual preview for an imported binary. Inspect its checks before installing.') if external else t('Single purple pixel scene.\nRAM clock sync and image/GIF player.')+(t('\nBattery voltage readout for the Battery page.') if '0.6.0' in name or '0.8.0' in name or '0.9.' in name else '')+(t('\nLive WIN/MAC and Windows-key lock in the header.') if '0.9.' in name else '')+t('\nTheme illustration / sample time.')))
-  preview=ASSETS/'assets/pixel/lcd-preview.png'
+  self.lcd_build=None if original or external else firmware_source.BUILDS.get(name)
   if original or external:
+   self.preview_note.set(t('VGN\'s factory firmware, unchanged. Use it to roll back.') if original else t('No trusted visual preview for an imported binary. Inspect its checks before installing.'))
    self.firmware_preview.configure(image='',text=t(' FACTORY FIRMWARE \n\n VGN V0113 ' if original else ' CUSTOM BINARY \n\n NO TRUSTED PREVIEW '),font=HEAD,foreground=MUTED,width=23,padding=30)
-  elif preview.exists():
-   with Image.open(preview) as source:self.firmware_photo=ImageTk.PhotoImage(source.resize((400,240),Image.Resampling.NEAREST))
-   self.firmware_preview.configure(image=self.firmware_photo,text='',width=0,padding=0)
+   self.lcd_caption.set('')
+  else:
+   installed=self.lavender_build()==self.lcd_build
+   self.preview_note.set(t(BUILD_NOTES.get(self.lcd_build,''))+('\n\n'+t('This build is installed on your keyboard now.') if installed else ''))
+   self.lcd_caption.set(t('Live preview of this build: the clock runs, and the Windows/Mac and lock badges change every few seconds to show what they look like.'))
+   self.firmware_preview.configure(text='',width=0,padding=0);self.lcd_phase=None;self.draw_lcd_preview()
+ def lavender_build(self):
+  """Patch name of the Lavender build the keyboard reports, if it is one the preview can draw."""
+  name=KNOWN_BUILDS.get((self.version or {}).get('reported_crc'),'')
+  build=name.lower().replace(' ','-')
+  return build if build in lcd_preview.FEATURES else None
+ def lcd_frame(self,build,moment,phase):
+  if build not in self.lcd_backgrounds:
+   try:stock=firmware_source.stock(CACHE,download=False)
+   except (OSError,ValueError):stock=None
+   self.lcd_backgrounds[build]=lcd_preview.background(firmware_source.PATCHES/f'{build}.json',stock)
+  demo=int(moment.timestamp()//3)%4
+  battery=next((s.get('reported_percent') for s in reversed(self.history.samples) if s.get('reported_percent') is not None),80)
+  frame=lcd_preview.render(build,self.lcd_backgrounds[build],moment,twelve=self.clock_format.get()==t('12-hour (AM/PM)'),mac=demo in (1,3),locked=demo>=2,battery=min(100,max(0,int(battery))),phase=phase)
+  return ImageTk.PhotoImage(Image.frombytes('RGB',(160,96),lcd_preview.to_rgb(frame)).resize((400,240),Image.Resampling.NEAREST))
+ def draw_lcd_preview(self):
+  if not getattr(self,'lcd_build',None):return
+  now=datetime.now();phase=int(time.monotonic()*4)
+  if phase==self.lcd_phase:return
+  self.lcd_phase=phase;self.firmware_photo=self.lcd_frame(self.lcd_build,now,phase);self.firmware_preview.configure(image=self.firmware_photo)
+ def lcd_legend(self,parent,bg):
+  """What each part of the Lavender screen means, and how to change it."""
+  tk.Label(parent,text=t('ON THE SCREEN'),font=LABEL,bg=bg,fg=MUTED,anchor='w').pack(fill='x',pady=(12,6))
+  for item in LCD_LEGEND:
+   tk.Label(parent,text='• '+t(item),font=BODY,bg=bg,fg=INK,wraplength=880,justify='left',anchor='w').pack(fill='x',pady=1)
  def choose_firmware(self):
   if self.busy:return
   path=filedialog.askopenfilename(parent=self.root,title=t('Import the official updater or a V0113 .bin'),filetypes=[(t('Firmware or official updater'),'*.bin *.exe')])
@@ -481,6 +525,7 @@ class Studio:
   scene_note=tk.Label(scene,text=t('The keyboard screen shows either the clock scene or the image/GIF you upload. A new upload replaces the previous one. Press the button below to go back to the clock scene.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=340,justify='left',anchor='w');scene_note.pack(fill='x',pady=(0,10))
   scene.bind('<Configure>',lambda e:scene_note.configure(wraplength=max(120,e.width-32)))
   f=tk.Frame(scene,bg=PANEL);f.pack(anchor='w');self.button(f,t('Lavender desktop'),lambda:self.change_screen(0))
+  self.lcd_legend(scene,PANEL)
   clock=pixel.panel(right,t('CLOCK'));clock.pack(fill='both',expand=True,pady=(12,0))
   ttk.Checkbutton(clock,text=t('Sync time automatically'),variable=self.auto_clock,command=self.clock_preference,style='Field.TCheckbutton').pack(anchor='w',pady=4)
   f=tk.Frame(clock,bg=PANEL);f.pack(anchor='w',pady=6);tk.Label(f,text=t('Every'),font=BODY,bg=PANEL,fg=INK).pack(side='left')
@@ -672,6 +717,7 @@ class Studio:
   self.installed.set(t('Installed: {build}  /  CRC {crc}').format(build=known.get(crc,t('Unrecognized build')),crc=crc) if known else t('Installed build: not reported over 2.4 GHz  /  receiver CRC {crc}').format(crc=crc))
   self.status.set(t('Version read complete / {build} / CRC {crc}').format(build=known.get(crc,t('Unknown build')),crc=crc))
   if known and crc not in known:self.firmware_note.set(self.firmware_block_message(crc))
+  self.update_firmware_preview()
  def choose_color(self):
   value=colorchooser.askcolor(color=self.color.get(),parent=self.root)[1]
   if value:self.color.set(value)
@@ -991,9 +1037,13 @@ class Studio:
   if self.page_name=='Lighting':self.draw_boards(time.monotonic(),only=('rgb',))
   elif self.page_name in ('Keymap','Advanced'):self.draw_boards(time.monotonic())
   if self.page_name in self.scrollers:self.scrollers[self.page_name][2]()
+  if self.page_name=='Firmware':self.draw_lcd_preview()
+  if self.page_name=='Screen' and not self.media_photos and self.lavender_build():
+   phase=int(time.monotonic()*4)
+   if phase!=getattr(self,'screen_phase',None):self.screen_phase=phase;self.screen_photo=self.lcd_frame(self.lavender_build(),datetime.now(),phase);self.screen_preview.configure(image=self.screen_photo)
   if self.page_name=='Screen' and self.media_photos and time.monotonic()>=self.media_due:
    self.screen_preview.configure(image=self.media_photos[self.media_frame]);self.media_frame=(self.media_frame+1)%len(self.media_photos);self.media_due=time.monotonic()+self.prepared.period_ms/1000
-  self.root.after(50 if self.page_name in ('Screen','Lighting') else 130,self.animate)
+  self.root.after(50 if self.page_name in ('Screen','Lighting','Firmware') else 130,self.animate)
  def smoke_done(self):
   result={'inventory_loaded':bool(self.inventory),'window_size':[self.root.winfo_width(),self.root.winfo_height()],'pages':list(self.pages),'english_ui':True,'no_automatic_settings_write':True,'firmware_install_requires_click':True}
   (WORK/'reports').mkdir(parents=True,exist_ok=True);(WORK/'reports/gui-smoke.json').write_text(json.dumps(result,indent=2),encoding='utf-8');print(json.dumps(result));self.close()

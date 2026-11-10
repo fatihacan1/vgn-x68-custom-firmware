@@ -473,6 +473,34 @@ TR = {
     'No readings yet. Press Measure now or Start monitoring.': 'Henüz ölçüm yok. Şimdi ölç veya İzlemeyi başlat\'a basın.',
     '{count} readings': '{count} ölçüm',
 
+    # Firmware preview and screen legend
+    'Newest, recommended. Windows logo (four colours) or Apple logo, a WIN/MAC chip and a padlock that shows the Windows-key lock. Includes everything from the older builds.':
+        'En yeni sürüm, önerilen. Dört renkli Windows logosu veya Apple logosu, WIN/MAC rozeti ve Windows tuşu kilidini gösteren asma kilit. Eski sürümlerdeki her şey dahil.',
+    'Windows/Apple logo and padlock badges (cyan Windows logo with a coloured rail). Includes everything from the older builds.':
+        'Windows/Apple logosu ve asma kilit rozeti (mavi Windows logosu ve renkli bir çizgi). Eski sürümlerdeki her şey dahil.',
+    'Header shows WIN/MAC and L:ON/L:OFF as text. Includes everything from the older builds.':
+        'Üst şeritte WIN/MAC ve L:ON/L:OFF yazı olarak görünür. Eski sürümlerdeki her şey dahil.',
+    'Adds the 12-hour AM/PM clock. Includes everything from the older builds.': '12 saatlik (AM/PM) saat seçeneğini ekler. Eski sürümlerdeki her şey dahil.',
+    'Adds the real battery voltage on the Battery page. The screen looks the same as 0.5.1.': 'Pil sayfasına gerçek batarya voltajını ekler. Ekran 0.5.1 ile aynı görünür.',
+    'First stable build: purple pixel scene, clock set from the computer, image/GIF player and a battery badge on the screen.':
+        'İlk kararlı sürüm: mor piksel sahne, bilgisayardan ayarlanan saat, resim/GIF oynatıcı ve ekranda pil rozeti.',
+    'This build is installed on your keyboard now.': 'Bu sürüm şu an klavyenizde yüklü.',
+    'Live preview of this build: the clock runs, and the Windows/Mac and lock badges change every few seconds to show what they look like.':
+        'Bu sürümün canlı önizlemesi: saat işler; Windows/Mac ve kilit rozetleri nasıl göründüklerini göstermek için birkaç saniyede bir değişir.',
+    'ON THE SCREEN': 'EKRANDA NE VAR?',
+    "Top-left logo and WIN/MAC: the keyboard's Windows or Mac mode. Fn + A switches to Windows, Fn + S to Mac (0.9.0 and newer).":
+        'Sol üstteki logo ve WIN/MAC: klavyenin Windows ya da Mac modu. Fn + A Windows\'a, Fn + S Mac\'e geçirir (0.9.0 ve üstü).',
+    'Padlock at the top right: the Windows-key lock, so the Windows key cannot interrupt a game. Fn + Windows key turns it on or off. Gold and closed = locked, green and open = unlocked.':
+        'Sağ üstteki asma kilit: Windows tuşu kilidi; oyun oynarken Windows tuşuna yanlışlıkla basınca masaüstüne atılmazsınız. Fn + Windows tuşu ile açılıp kapanır. Altın ve kapalı = kilitli, yeşil ve açık = kilitsiz.',
+    'Big clock and DD/MM date: set from this computer (Screen page > Clock). They keep running when the app is closed, until the keyboard loses power.':
+        'Büyük saat ve GÜN/AY tarihi: bu bilgisayardan ayarlanır (Ekran sayfası > Saat). Uygulama kapalıyken de işlemeye devam eder; klavyenin gücü tamamen kesilene kadar.',
+    'Battery at the bottom: the battery level the keyboard reports.': 'Alttaki pil: klavyenin bildirdiği pil seviyesi.',
+    'X68.EXE, CLOCK, DAY-MO, START and READY: decorative pixel-game text. They have no function.':
+        'X68.EXE, CLOCK, DAY-MO, START ve READY: piksel oyun havası veren süs yazıları. Bir işlevleri yok.',
+    'The bunny blinks and the coin spins: animation only.': 'Tavşanın göz kırpması ve dönen altın para: yalnızca animasyon.',
+    'Fn + PgUp steps through the screen modes. On Lavender the first modes all show this same clock scene and the last one shows your uploaded image/GIF, so press it a few times until your image appears. The Screen page buttons switch directly.':
+        "Fn + PgUp ekran modları arasında sırayla gezer. Lavender'da ilk modların hepsi bu saat sahnesini, sonuncusu ise yüklediğiniz resmi/GIF'i gösterir; resminiz gelene kadar birkaç kez basın. Ekran sayfasındaki düğmeler doğrudan geçiş yapar.",
+
     # Background operations (shown as "<name>..." and "<name> complete.")
     '{operation} complete.': '{operation} tamamlandı.',
     '{operation} is still running. Please wait.': '{operation} hâlâ sürüyor. Lütfen bekleyin.',
