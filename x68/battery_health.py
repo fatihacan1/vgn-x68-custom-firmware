@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import time
 
+from .i18n import t
+
 DIVIDER_RATIO = 2
 ASSUMPTION = (
     "Estimate: native ADC units read as millivolts at the sense pin behind an "
@@ -103,12 +105,12 @@ class ChargeTrend:
     def verdict(self, external_power):
         slope = self.slope_mv_per_min()
         if slope is None or self.span_s() < 120:
-            return "collecting", "Collecting readings. Keep monitoring for at least 2 minutes."
+            return "collecting", t("Collecting readings. Keep monitoring for at least 2 minutes.")
         if slope >= 2:
-            return "charging", f"Charging: voltage rising {slope:+.1f} mV/min."
+            return "charging", t("Charging: voltage rising {slope} mV/min.").format(slope=f"{slope:+.1f}")
         if slope <= -2:
-            return "discharging", f"Discharging: voltage falling {slope:+.1f} mV/min."
+            return "discharging", t("Discharging: voltage falling {slope} mV/min.").format(slope=f"{slope:+.1f}")
         if external_power and self.points[-1][1] < 4.0:
-            return "not_charging", (f"Not charging: USB power present but voltage flat ({slope:+.1f} mV/min) "
-                                    "over the last few minutes.")
-        return "steady", f"Steady ({slope:+.1f} mV/min)."
+            return "not_charging", t("Not charging: USB power present but voltage flat ({slope} mV/min) "
+                                     "over the last few minutes.").format(slope=f"{slope:+.1f}")
+        return "steady", t("Steady ({slope} mV/min).").format(slope=f"{slope:+.1f}")

@@ -1,0 +1,414 @@
+"""Interface language: English (source) and Turkish.
+
+English strings are the keys, so untranslated text simply falls back to English.
+Only display text goes through t(); internal values, logs, backups and exported
+JSON stay in English. The language is read once at start-up (see app.py) and a
+change takes effect after the app restarts.
+"""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+LANGUAGES = {'en': 'English', 'tr': 'Türkçe'}
+LANG = 'en'
+
+TR = {
+    # Navigation and page titles
+    'Home': 'Ana Sayfa',
+    'Lighting': 'Aydınlatma',
+    'Keymap': 'Tuş Atama',
+    'Macros': 'Makrolar',
+    'Screen': 'Ekran',
+    'Battery': 'Pil',
+    'Firmware': 'FIRMWARE',  # loanword: keep the Latin I when upper-cased
+    'Knowledge': 'Bilgi',
+    'Advanced': 'Gelişmiş',
+    'Preview an effect, then send it to the keyboard.': 'Bir efekti önizleyin, sonra klavyeye gönderin.',
+    'Pick a key on the board and give it a new action.': 'Şemadan bir tuş seçin ve ona yeni bir eylem atayın.',
+    'Shortcuts stored on the keyboard itself.': 'Doğrudan klavyenin içinde saklanan kısayollar.',
+    'Measure the pack and watch it charge.': 'Bataryayı ölçün ve şarj oluşunu izleyin.',
+    'Reviewed X68 builds, installed only when you say so.': 'İncelenmiş X68 sürümleri, yalnızca siz isterseniz yüklenir.',
+    'Raw data, backups and the key tester.': 'Ham veriler, yedekler ve tuş test aracı.',
+    'Send an image or GIF to the 160x96 screen.': '160x96 ekrana resim veya GIF gönderin.',
+    'Verified facts and open questions, ready to copy.': 'Doğrulanmış bilgiler ve açık sorular, kopyalamaya hazır.',
+    'Plug in over USB. Nothing is written until you press Send.': 'USB ile bağlayın. Gönder\'e basana kadar hiçbir şey yazılmaz.',
+
+    # Sidebar, header and status bar
+    'CUSTOM\nFIRMWARE': 'ÖZEL\nFIRMWARE',
+    'COMMAND': 'MENÜ',
+    'LINK': 'BAĞLANTI',
+    'LANGUAGE': 'DİL',
+    'BATTERY': 'PİL',
+    'FIRMWARE': 'FIRMWARE',
+    'Not connected': 'Bağlı değil',
+    'LOOKING FOR X68': 'X68 ARANIYOR',
+    'Connect the X68 over USB or its 2.4 GHz receiver.': 'X68\'i USB kablosuyla veya 2.4 GHz alıcısıyla bağlayın.',
+    'Connect': 'Bağlan',
+    'Connecting...': 'Bağlanıyor...',
+    'Refresh': 'Yenile',
+    'USB / wired mode': 'USB / kablolu mod',
+    '2.4 GHz receiver (firmware and LCD media need USB)': '2.4 GHz alıcı (firmware ve LCD medyası için USB gerekir)',
+    'Connected. Device protocol verified.': 'Bağlandı. Cihaz protokolü doğrulandı.',
+    '[ ]  X68 NOT CONNECTED': '[ ]  X68 BAĞLI DEĞİL',
+    'Choosing keys, colours or files never writes the keyboard. Each page has its own Send button.':
+        'Tuş, renk veya dosya seçmek klavyeye hiçbir şey yazmaz. Her sayfanın kendi Gönder düğmesi vardır.',
+    'Language': 'Dil',
+    'Restart the app now to switch the language?': 'Dili değiştirmek için uygulama şimdi yeniden başlatılsın mı?',
+    'Language saved. It applies the next time the app opens.': 'Dil kaydedildi. Uygulama bir sonraki açılışta bu dille başlar.',
+
+    # Lighting
+    'Wave': 'Dalga', 'Colour cloud': 'Renk bulutu', 'Vortex': 'Girdap', 'Spectrum': 'Spektrum',
+    'Breathing': 'Nefes', 'Solid': 'Sabit', 'Reactive': 'Tepkili', 'Ripple': 'Halka',
+    'Trail': 'İz', 'Stars': 'Yıldızlar', 'Flowers': 'Çiçekler', 'Scroll': 'Kayan',
+    'Wings': 'Kanatlar', 'Build up': 'Dolma', 'Rain': 'Yağmur', 'Scan': 'Tarama',
+    'Spread': 'Yayılma', 'Fast wave': 'Hızlı dalga', 'Custom table': 'Özel tablo', 'Off': 'Kapalı',
+    'EFFECT': 'EFEKT',
+    'LIGHT': 'IŞIK',
+    'BRIGHTNESS': 'PARLAKLIK',
+    'SPEED': 'HIZ',
+    'COLOUR': 'RENK',
+    'MODE': 'MOD',
+    'PREVIEW': 'ÖNİZLEME',
+    'Keep': 'Koru',
+    'Single': 'Tek renk',
+    'Rainbow': 'Gökkuşağı',
+    'Effect': 'Efekt',
+    'Key draft': 'Tuş taslağı',
+    'Send to keyboard': 'Klavyeye gönder',
+    'Read from keyboard': 'Klavyeden oku',
+    'Export draft': 'Taslağı dışa aktar',
+    'The board is a preview. In Key draft, click keys to paint them; drafts stay on this computer.':
+        'Şema yalnızca önizlemedir. Tuş taslağı modunda tuşlara tıklayıp boyayın; taslaklar bu bilgisayarda kalır.',
+    'Per-key draft is local only. Select Effect preview to send global lighting.':
+        'Tuş taslağı yalnızca yereldir. Genel aydınlatmayı göndermek için Efekt önizlemesini seçin.',
+    'Connect the keyboard and read its settings first.': 'Önce klavyeyi bağlayın ve ayarlarını okuyun.',
+    '{key} colour staged locally. Per-key device upload is not verified.':
+        '{key} rengi yerel taslağa eklendi. Tuş başına cihaza yükleme henüz doğrulanmadı.',
+
+    # Keymap
+    'SELECTED KEY': 'SEÇİLİ TUŞ',
+    'Click a key on the board.': 'Şemadan bir tuşa tıklayın.',
+    'ACTION TYPE': 'EYLEM TÜRÜ',
+    'Keyboard': 'Klavye',
+    'Media': 'Medya',
+    'NEW ACTION': 'YENİ EYLEM',
+    'Add to draft': 'Taslağa ekle',
+    'Fn and reserved firmware functions stay protected.': 'Fn ve firmware\'e ayrılmış işlevler korunur.',
+    'DRAFT': 'TASLAK',
+    'Empty. Picking keys never writes the keyboard.': 'Boş. Tuş seçmek klavyeye hiçbir şey yazmaz.',
+    'Send draft ({count})': 'Taslağı gönder ({count})',
+    'Discard': 'Vazgeç',
+    'Cell': 'Hücre',
+    'Matrix cell {index}': 'Matris hücresi {index}',
+    '{key}\nnow sends {action}': '{key}\nşu an gönderiyor: {action}',
+    'This key is reserved, unassigned or not yet mapped.': 'Bu tuş ayrılmış, atanmamış ya da henüz eşlenmemiş.',
+    'Select an editable source key.': 'Düzenlenebilir bir kaynak tuş seçin.',
+    'Select an editable source key first.': 'Önce düzenlenebilir bir kaynak tuş seçin.',
+    'Added to draft. No command was sent.': 'Taslağa eklendi. Hiçbir komut gönderilmedi.',
+    'Draft discarded. No command was sent.': 'Taslak silindi. Hiçbir komut gönderilmedi.',
+    '{source}  to  {target}': '{source}  →  {target}',
+    'Add a change to the draft first.': 'Önce taslağa bir değişiklik ekleyin.',
+    'Keymap sent and verified.': 'Tuş ataması gönderildi ve doğrulandı.',
+    'Play': 'Oynat', 'Prev': 'Önceki', 'Next': 'Sonraki', 'Vol+': 'Ses+', 'Vol−': 'Ses−', 'Mute': 'Sessiz',
+
+    # Macros
+    'SLOT': 'YUVA',
+    'White: slot holds\na macro.': 'Beyaz: yuvada\nmakro var.',
+    'Load slot': 'Yuvayı yükle',
+    'SCRIPT': 'BETİK',
+    'One shortcut or WAIT per line. Click a card above to add it.':
+        'Her satıra bir kısayol veya WAIT yazın. Eklemek için yukarıdaki kartlara tıklayın.',
+    'Check': 'Denetle',
+    'Save to selected key': 'Seçili tuşa kaydet',
+    'Pick the target key in Keymap first.': 'Önce Tuş Atama sayfasında hedef tuşu seçin.',
+    'Valid macro / {count} events. Not saved yet.': 'Geçerli makro / {count} olay. Henüz kaydedilmedi.',
+    'Invalid macro. Use balanced DOWN / UP events and valid WAIT values.':
+        'Geçersiz makro. DOWN / UP olaylarını eşleştirin ve geçerli WAIT değerleri kullanın.',
+    'This slot contains events the text editor cannot represent.': 'Bu yuva, metin düzenleyicinin gösteremediği olaylar içeriyor.',
+    'Slot loaded from the keyboard.': 'Yuva klavyeden yüklendi.',
+    'Empty slot. Write a new macro.': 'Boş yuva. Yeni bir makro yazın.',
+    'Pick the target key in Keymap first, then come back here.': 'Önce Tuş Atama sayfasında hedef tuşu seçin, sonra buraya dönün.',
+
+    # Battery
+    'PACK VOLTAGE': 'BATARYA VOLTAJI',
+    'DEVICE LEVEL': 'CİHAZ SEVİYESİ',
+    'FULL': 'DOLU',
+    'No report yet.': 'Henüz ölçüm yok.',
+    'Plug in over USB to measure.': 'USB ile bağlayıp ölçün.',
+    'Monitoring stopped': 'İzleme durduruldu',
+    'Monitoring / every 5 seconds': 'İzleniyor / 5 saniyede bir',
+    ' / {count} readings': ' / {count} ölçüm',
+    'Measure now': 'Şimdi ölç',
+    'Start monitoring': 'İzlemeyi başlat',
+    'Stop': 'Durdur',
+    'EXPORT': 'DIŞA AKTAR',
+    'Connect the keyboard over USB in wired mode.': 'Klavyeyi kablolu modda USB ile bağlayın.',
+    'Voltage needs the Lavender Quest 0.6.0 build (Firmware page).': 'Voltaj ölçümü için Lavender Quest 0.6.0 sürümü gerekir (Firmware sayfası).',
+    'Battery monitoring started / every 5 seconds.': 'Pil izleme başladı / 5 saniyede bir.',
+    'Monitoring stopped. The last reading is retained.': 'İzleme durduruldu. Son ölçüm saklanıyor.',
+    'Read at {stamp}. USB power {power}. Estimate via an inferred 1:2 divider.':
+        '{stamp} saatinde okundu. USB gücü {power}. Tahmini değer (1:2 bölücü varsayımıyla).',
+    'present': 'var',
+    'absent': 'yok',
+    'Device-reported level only.': 'Yalnızca cihazın bildirdiği seviye.',
+    'Read {stamp} / raw level {level}, status {status}. Voltage is measured only by the 0.6.0 build.':
+        '{stamp} okundu / ham seviye {level}, durum {status}. Voltaj yalnızca 0.6.0 sürümüyle ölçülür.',
+    'Battery read complete at {stamp} / {value}.': 'Pil okuması tamamlandı: {stamp} / {value}.',
+    'No voltage on the battery line.': 'Batarya hattında voltaj yok.',
+    'Check that the battery connector is fully seated.': 'Batarya konnektörünün tam oturduğunu kontrol edin.',
+    "If it is, the pack's protection board has cut the cell off. Jump-start it as below.":
+        'Oturuyorsa bataryanın koruma kartı hücreyi devreden çıkarmıştır. Aşağıdaki gibi canlandırın.',
+    'Unplug the pack. Clip a slow source to the cell tabs (B+ / B-) behind the protection board.':
+        'Bataryayı çıkarın. Koruma kartının arkasındaki hücre uçlarına (B+ / B-) yavaş bir kaynak bağlayın.',
+    'Back at 3.0 V, plug it in with USB and press Start monitoring here.':
+        '3.0 V\'a geri geldiğinde USB ile takın ve buradan İzlemeyi başlat\'a basın.',
+    'Deeply discharged. Jump-start it.': 'Tamamen boşalmış. Canlandırılması gerekiyor.',
+    'Unplug the pack from the keyboard.': 'Bataryayı klavyeden çıkarın.',
+    'Slow source: two AA cells in series through 10-33 ohm, or USB 5 V through 100 ohm. Red to B+, black to B-.':
+        'Yavaş kaynak: 10-33 ohm üzerinden seri iki AA pil veya 100 ohm üzerinden USB 5 V. Kırmızı B+, siyah B- ucuna.',
+    'If a small protection board sits on the pack, clip to the cell tabs behind it, not the wire ends.':
+        'Batarya üzerinde küçük bir koruma kartı varsa kablo uçlarına değil, arkasındaki hücre uçlarına bağlayın.',
+    'Measure every 10 minutes. Stop if the pack gets warm or swells.':
+        '10 dakikada bir ölçün. Batarya ısınır veya şişerse hemen durun.',
+    'At 3.0 V, plug it back in with USB and press Start monitoring. Rising voltage means the keyboard charges it.':
+        '3.0 V\'ta USB ile tekrar takın ve İzlemeyi başlat\'a basın. Voltaj yükseliyorsa klavye şarj ediyor demektir.',
+    'Low but recoverable.': 'Düşük ama kurtarılabilir.',
+    'Keep USB connected and press Start monitoring.': 'USB bağlı kalsın ve İzlemeyi başlat\'a basın.',
+    "Rising voltage within a few minutes means the keyboard's charger is working.":
+        'Birkaç dakika içinde voltaj yükseliyorsa klavyenin şarj devresi çalışıyor demektir.',
+    'Flat line: keep the slow source on until 3.0 V, then try again.':
+        'Düz çizgi: yavaş kaynağı 3.0 V\'a kadar bağlı tutun, sonra tekrar deneyin.',
+    'Low. Charge before wireless use.': 'Düşük. Kablosuz kullanmadan önce şarj edin.',
+    'Keep USB connected. Voltage should rise steadily while charging.': 'USB bağlı kalsın. Şarj olurken voltaj düzenli yükselmeli.',
+    'Battery voltage looks healthy.': 'Batarya voltajı sağlıklı görünüyor.',
+    'Nothing to do. Use monitoring to watch it charge or discharge.':
+        'Yapılacak bir şey yok. Şarj veya deşarjı görmek için izlemeyi kullanın.',
+    'Voltage above a normal Li-ion cell.': 'Voltaj normal bir Li-ion hücrenin üzerinde.',
+    'This often means no battery is attached and the charger output is being read.':
+        'Bu genelde batarya takılı olmadığını ve şarj devresinin çıkışının okunduğunu gösterir.',
+    'Check the connector, then read again.': 'Konnektörü kontrol edip tekrar okuyun.',
+    'Collecting readings. Keep monitoring for at least 2 minutes.': 'Ölçümler toplanıyor. En az 2 dakika izlemeye devam edin.',
+    'Charging: voltage rising {slope} mV/min.': 'Şarj oluyor: voltaj {slope} mV/dk artıyor.',
+    'Discharging: voltage falling {slope} mV/min.': 'Boşalıyor: voltaj {slope} mV/dk düşüyor.',
+    'Not charging: USB power present but voltage flat ({slope} mV/min) over the last few minutes.':
+        'Şarj olmuyor: USB gücü var ama son birkaç dakikada voltaj sabit ({slope} mV/dk).',
+    'Steady ({slope} mV/min).': 'Sabit ({slope} mV/dk).',
+
+    # Firmware
+    'Installed build: not checked': 'Yüklü sürüm: kontrol edilmedi',
+    'Import file': 'Dosya içe aktar',
+    'Check installed version': 'Yüklü sürümü kontrol et',
+    'Allow my unreviewed binary (hardware recovery may be required)':
+        'İncelenmemiş kendi dosyama izin ver (donanımsal kurtarma gerekebilir)',
+    "Builds are made on this computer from the official V0113 firmware, downloaded once from VGN's own server. Offline? Import the official updater EXE or your own 236,916-byte .bin. Importing never uploads anything.":
+        'Sürümler bu bilgisayarda, VGN\'in kendi sunucusundan bir kez indirilen resmi V0113 firmware\'inden üretilir. İnternet yok mu? Resmi güncelleyici EXE\'sini veya kendi 236.916 baytlık .bin dosyanızı içe aktarın. İçe aktarma hiçbir şey yüklemez.',
+    'Install selected firmware': 'Seçili firmware\'i yükle',
+    'Sync keyboard clock': 'Klavye saatini eşitle',
+    'Select a build or inspect your own file, then explicitly click Install.':
+        'Bir sürüm seçin veya kendi dosyanızı inceleyin, ardından açıkça Yükle\'ye tıklayın.',
+    'Selected file:': 'Seçilen dosya:',
+    'ORIGINAL V0113': 'ORİJİNAL V0113',
+    'YOUR FIRMWARE': 'SİZİN FIRMWARE',
+    'X68 PIXEL DESKTOP': 'X68 PİKSEL MASAÜSTÜ',
+    "VGN's factory firmware, unchanged. Use it to roll back.": 'VGN\'in değiştirilmemiş fabrika firmware\'i. Geri dönmek için kullanın.',
+    'No trusted visual preview for an imported binary. Inspect its checks before installing.':
+        'İçe aktarılan dosya için güvenilir önizleme yok. Yüklemeden önce kontrol sonuçlarını inceleyin.',
+    'Single purple pixel scene.\nRAM clock sync and image/GIF player.': 'Tek mor piksel sahnesi.\nRAM saat eşitleme ve resim/GIF oynatıcı.',
+    '\nBattery voltage readout for the Battery page.': '\nPil sayfası için batarya voltajı okuma.',
+    '\nLive WIN/MAC and Windows-key lock in the header.': '\nBaşlıkta canlı WIN/MAC ve Windows tuşu kilidi.',
+    '\nTheme illustration / sample time.': '\nTema çizimi / örnek saat.',
+    ' FACTORY FIRMWARE \n\n VGN V0113 ': ' FABRİKA FIRMWARE \n\n VGN V0113 ',
+    ' CUSTOM BINARY \n\n NO TRUSTED PREVIEW ': ' ÖZEL DOSYA \n\n GÜVENİLİR ÖNİZLEME YOK ',
+    'Import the official updater or a V0113 .bin': 'Resmi güncelleyiciyi veya bir V0113 .bin dosyasını içe aktarın',
+    'Firmware or official updater': 'Firmware veya resmi güncelleyici',
+    'Not the official updater and not a 236,916-byte V0113 .bin.': 'Bu dosya ne resmi güncelleyici ne de 236.916 baytlık bir V0113 .bin.',
+    'Official V0113 recognised by SHA256 and cached. All builds can now be made offline.':
+        'Resmi V0113 SHA256 ile tanındı ve önbelleğe alındı. Artık tüm sürümler çevrimdışı üretilebilir.',
+    'Official firmware imported. Nothing was uploaded.': 'Resmi firmware içe aktarıldı. Hiçbir şey yüklenmedi.',
+    'bytes': 'bayt',
+    'Known reviewed image': 'Bilinen, incelenmiş imaj',
+    'Structurally valid; code and hardware behavior are NOT reviewed': 'Yapısal olarak geçerli; kod ve donanım davranışı İNCELENMEDİ',
+    'File inspected locally. Nothing was uploaded.': 'Dosya yerel olarak incelendi. Hiçbir şey yüklenmedi.',
+    'Choose a valid firmware file first.': 'Önce geçerli bir firmware dosyası seçin.',
+    'This binary is unreviewed. Enable the explicit unreviewed-file option before installing.':
+        'Bu dosya incelenmemiş. Yüklemeden önce incelenmemiş dosya seçeneğini açıkça etkinleştirin.',
+    '\n\nThis is YOUR UNREVIEWED CODE. Structural checks do not establish hardware compatibility; recovery may require a programmer.':
+        '\n\nBu SİZİN İNCELENMEMİŞ KODUNUZ. Yapısal kontroller donanım uyumluluğunu kanıtlamaz; kurtarmak için programlayıcı gerekebilir.',
+    'Install firmware': 'Firmware yükle',
+    'Install {name}?': '{name} yüklensin mi?',
+    '\n\nThe official V0113 firmware is downloaded from VGN once if it is not cached yet.\nKeep USB connected in wired mode until verification completes.\nSettings are backed up before writing.':
+        '\n\nResmi V0113 firmware\'i önbellekte yoksa VGN\'den bir kez indirilir.\nDoğrulama bitene kadar USB kablolu modda bağlı kalsın.\nYazmadan önce ayarlar yedeklenir.',
+    'Preparing the official V0113 base and applying the patch...': 'Resmi V0113 tabanı hazırlanıyor ve yama uygulanıyor...',
+    'Installation complete. Device-reported CRC matches the selected build.':
+        'Yükleme tamamlandı. Cihazın bildirdiği CRC seçilen sürümle eşleşiyor.',
+    'Installed: {build}  /  CRC {crc}': 'Yüklü: {build}  /  CRC {crc}',
+    'Installed build: not reported over 2.4 GHz  /  receiver CRC {crc}': 'Yüklü sürüm: 2.4 GHz üzerinden bildirilmiyor  /  alıcı CRC {crc}',
+    'Unrecognized build': 'Tanınmayan sürüm',
+    'Unknown build': 'Bilinmeyen sürüm',
+    'Version read complete / {build} / CRC {crc}': 'Sürüm okundu / {build} / CRC {crc}',
+    'Writing packet {done} / {total}': 'Paket yazılıyor {done} / {total}',
+    'Update stopped. Check Advanced logs before retrying; no automatic retry was sent.':
+        'Güncelleme durdu. Tekrar denemeden önce Gelişmiş sayfasındaki kayıtlara bakın; otomatik yeniden deneme yapılmadı.',
+
+    # Screen
+    'Crop': 'Kırp', 'Fit': 'Sığdır', 'Stretch': 'Uzat',
+    'Choose image / GIF': 'Resim / GIF seç',
+    'Upload': 'Yükle',
+    'PNG, JPG, GIF, WEBP or BMP. Long GIFs are sampled to 8 frames.': 'PNG, JPG, GIF, WEBP veya BMP. Uzun GIF\'lerden 8 kare alınır.',
+    'SCENE': 'SAHNE',
+    'Upload replaces the custom animation bank. Switch back to the clock scene at any time.':
+        'Yükleme özel animasyon bankasının yerine geçer. İstediğiniz zaman saat sahnesine dönebilirsiniz.',
+    'Lavender desktop': 'Lavender masaüstü',
+    'CLOCK': 'SAAT',
+    'Sync time automatically': 'Saati otomatik eşitle',
+    'Every': 'Her',
+    'minutes': 'dakikada bir',
+    'Time format': 'Saat biçimi',
+    '24-hour': '24 saat',
+    '12-hour (AM/PM)': '12 saat (ÖÖ/ÖS)',
+    'Open at login on Mac': 'Mac oturumu açılınca başlat',
+    'Launch when I sign in to Windows': 'Windows\'a giriş yapınca başlat',
+    'Sync time now': 'Saati şimdi eşitle',
+    'AM/PM needs Lavender Quest 0.8.0 or newer. On 2.4 GHz, the format is checked after syncing; use wired USB if it cannot be verified.':
+        '12 saat biçimi için Lavender Quest 0.8.0 veya üstü gerekir. 2.4 GHz\'de biçim eşitlemeden sonra kontrol edilir; doğrulanamazsa kablolu USB kullanın.',
+    'Time and format stay in RAM. After a full power loss, reopen the app to sync again.':
+        'Saat ve biçim RAM\'de tutulur. Güç tamamen kesilirse yeniden eşitlemek için uygulamayı açın.',
+    'Waiting for a verified 0.5.1+ connection.': 'Doğrulanmış bir 0.5.1+ bağlantısı bekleniyor.',
+    'Choose an image or animation': 'Bir resim veya animasyon seçin',
+    'Images and animations': 'Resimler ve animasyonlar',
+    'All files': 'Tüm dosyalar',
+    '{name}  /  {source} → {frames} frames  /  {period} ms per frame  /  {size} bytes':
+        '{name}  /  {source} → {frames} kare  /  kare başına {period} ms  /  {size} bayt',
+    'Preview ready. Nothing has been sent to the keyboard.': 'Önizleme hazır. Klavyeye hiçbir şey gönderilmedi.',
+    'Choose an image or GIF first.': 'Önce bir resim veya GIF seçin.',
+    'Install Lavender Quest 0.6.0 in Firmware first.': 'Önce Firmware sayfasından Lavender Quest 0.6.0 yükleyin.',
+    'Install Lavender Quest 0.6.0 first.': 'Önce Lavender Quest 0.6.0 yükleyin.',
+    'Replace custom animation': 'Özel animasyonu değiştir',
+    'Upload the converted preview?\n\nThis replaces the keyboard’s entire custom image/GIF bank. The previous animation cannot be read back.\nKeep USB connected until the transfer completes.':
+        'Dönüştürülen önizleme yüklensin mi?\n\nBu işlem klavyedeki tüm özel resim/GIF bankasının yerine geçer. Önceki animasyon geri okunamaz.\nAktarım bitene kadar USB bağlı kalsın.',
+    'Transfer acknowledged; display settings read back. Check the physical screen. Converted data and transfer log saved in reports/media.':
+        'Aktarım onaylandı; ekran ayarları geri okundu. Klavyenin ekranını kontrol edin. Dönüştürülen veri ve aktarım kaydı reports/media klasörüne kaydedildi.',
+    'Custom media selected. Use Lavender desktop to return to the clock scene.':
+        'Özel medya seçildi. Saat sahnesine dönmek için Lavender masaüstü\'nü kullanın.',
+    'Lavender desktop selected.': 'Lavender masaüstü seçildi.',
+    'Uploading {done} / {total} bytes. Keep USB connected.': '{done} / {total} bayt yükleniyor. USB bağlı kalsın.',
+    'Transfer stopped. Check Advanced logs. No automatic retry was sent.':
+        'Aktarım durdu. Gelişmiş sayfasındaki kayıtlara bakın. Otomatik yeniden deneme yapılmadı.',
+    'Time format saved. Press Sync time now to apply to the keyboard.':
+        'Saat biçimi kaydedildi. Klavyeye uygulamak için Saati şimdi eşitle\'ye basın.',
+    'The app will open at your next Mac login.': 'Uygulama bir sonraki Mac oturumunda açılacak.',
+    'Windows startup enabled.': 'Windows açılışında başlatma etkin.',
+    'Open at login disabled.': 'Açılışta başlatma kapatıldı.',
+    'Startup setting failed: ': 'Başlangıç ayarı yapılamadı: ',
+    'Connect the keyboard and wait for its settings to load before syncing.':
+        'Eşitlemeden önce klavyeyi bağlayın ve ayarlarının yüklenmesini bekleyin.',
+    'Live sync requires Lavender Quest 0.5.1 or newer. Install it in Firmware.':
+        'Canlı eşitleme için Lavender Quest 0.5.1 veya üstü gerekir. Firmware sayfasından yükleyin.',
+    'Another operation is running. Try Sync time now when it finishes.':
+        'Başka bir işlem sürüyor. Bitince Saati şimdi eşitle\'yi deneyin.',
+    'AM/PM needs Lavender Quest 0.8.0 or newer. Check the installed build in Firmware.':
+        '12 saat biçimi için Lavender Quest 0.8.0 veya üstü gerekir. Firmware sayfasında yüklü sürümü kontrol edin.',
+    'Applying {format} time to the keyboard...': 'Klavyeye {format} biçiminde saat uygulanıyor...',
+    'Keyboard synced: {time} / {format}': 'Klavye eşitlendi: {time} / {format}',
+    'Sync failed: ': 'Eşitleme başarısız: ',
+
+    # Knowledge
+    'FACTS YOU CAN TAKE WITH YOU': 'YANINIZDA GÖTÜREBİLECEĞİNİZ BİLGİLER',
+    'Copy this context into an AI chat. Verified behavior and open questions are explicitly separated. No private device paths are included.':
+        'Bu içeriği bir yapay zekâ sohbetine kopyalayın. Doğrulanmış davranışlar ve açık sorular ayrı tutulur. Cihaza özel yollar dahil edilmez. (İçerik İngilizcedir.)',
+    'Copy AI context': 'YZ içeriğini kopyala',
+    'Export Markdown': 'Markdown olarak aktar',
+    'Export JSON': 'JSON olarak aktar',
+    'Knowledge file missing. Use the complete application folder.': 'Bilgi dosyası eksik. Uygulama klasörünün tamamını kullanın.',
+    'AI context copied to clipboard.': 'YZ içeriği panoya kopyalandı.',
+    'Knowledge exported.': 'Bilgi dışa aktarıldı.',
+
+    # Advanced
+    'Device & packets': 'Cihaz ve paketler',
+    'Key tester': 'Tuş test aracı',
+    'Backups & logs': 'Yedekler ve kayıtlar',
+    'Focused-window Raw Input from the X68 only. Key tester requires Windows.':
+        'Yalnızca bu pencere öndeyken ve yalnızca X68\'den gelen tuşlar okunur. Tuş test aracı Windows gerektirir.',
+    'Start 60-second test': '60 saniyelik testi başlat',
+    'Stop test': 'Testi durdur',
+    'Clear results': 'Sonuçları temizle',
+    'No key events recorded.': 'Henüz tuş basışı kaydedilmedi.',
+    'Every settings write creates a backup and verifies readback.': 'Her ayar yazımı önce yedek alır ve sonra geri okuyarak doğrular.',
+    'Restore settings backup': 'Ayar yedeğini geri yükle',
+    'Export diagnostics': 'Tanılama verisini aktar',
+    'Open reports folder': 'Rapor klasörünü aç',
+    'Read cached ADC snapshot': 'Önbellekteki ADC verisini oku',
+    'Advanced matrix-cell selection (optional):': 'Gelişmiş matris hücresi seçimi (isteğe bağlı):',
+    'Connect the X68 in wired mode first.': 'Önce X68\'i kablolu modda bağlayın.',
+    'Testing. Keep this window focused.': 'Test ediliyor. Bu pencere önde kalsın.',
+    '{key} / {count} press events / {keys} distinct keys': '{key} / {count} basış / {keys} farklı tuş',
+    'Restore X68 settings backup': 'X68 ayar yedeğini geri yükle',
+    'JSON backup': 'JSON yedeği',
+    'Check the installed version first.': 'Önce yüklü sürümü kontrol edin.',
+    'ADC snapshot read. Raw counts and calculation are in Advanced; physical voltage/current remain unknown.':
+        'ADC verisi okundu. Ham değerler ve hesap Gelişmiş sayfasında; gerçek voltaj/akım bilinmiyor.',
+    'File saved.': 'Dosya kaydedildi.',
+    'Interface error recorded in Advanced. Other actions remain available.':
+        'Arayüz hatası Gelişmiş sayfasına kaydedildi. Diğer işlemler kullanılabilir.',
+    'Wait for the device transfer to finish before closing.': 'Kapatmadan önce cihaz aktarımının bitmesini bekleyin.',
+
+    # Background operations (shown as "<name>..." and "<name> complete.")
+    '{operation} complete.': '{operation} tamamlandı.',
+    '{operation} is still running. Please wait.': '{operation} hâlâ sürüyor. Lütfen bekleyin.',
+    'Operation failed. Check the connection; details are in Advanced.': 'İşlem başarısız. Bağlantıyı kontrol edin; ayrıntılar Gelişmiş sayfasında.',
+    'Finding X68': 'X68 aranıyor',
+    'Reading keyboard settings': 'Klavye ayarları okunuyor',
+    'Checking installed build': 'Yüklü sürüm kontrol ediliyor',
+    'Saving lighting': 'Aydınlatma kaydediliyor',
+    'Sending keymap draft': 'Tuş ataması taslağı gönderiliyor',
+    'Saving macro': 'Makro kaydediliyor',
+    'Reading battery': 'Pil okunuyor',
+    'Installing firmware': 'Firmware yükleniyor',
+    'Inspecting firmware file': 'Firmware dosyası inceleniyor',
+    'Converting image': 'Resim dönüştürülüyor',
+    'Uploading screen media': 'Ekran medyası yükleniyor',
+    'Selecting screen': 'Ekran seçiliyor',
+    'Syncing keyboard clock': 'Klavye saati eşitleniyor',
+    'Restoring settings backup': 'Ayar yedeği geri yükleniyor',
+    'Reading cached ADC snapshot': 'Önbellekteki ADC verisi okunuyor',
+    'Settings loaded. Nothing is written until you press Send.': 'Ayarlar yüklendi. Gönder\'e basana kadar hiçbir şey yazılmaz.',
+}
+
+CATALOGS = {'tr': TR}
+
+
+def t(text: str, lang: str | None = None) -> str:
+    """Translate an English interface string; unknown text is returned unchanged."""
+    return CATALOGS.get(lang or LANG, {}).get(text, text)
+
+
+def upper(text: str, lang: str | None = None) -> str:
+    """Upper-case with Turkish dotted/dotless i rules when Turkish is active."""
+    if (lang or LANG) == 'tr':
+        text = text.replace('i', 'İ').replace('ı', 'I')
+    return text.upper()
+
+
+def system_language() -> str:
+    """'tr' when the Windows display language (or the locale elsewhere) is Turkish."""
+    try:
+        if sys.platform == 'win32':
+            import ctypes
+            return 'tr' if ctypes.windll.kernel32.GetUserDefaultUILanguage() & 0x3FF == 0x1F else 'en'
+        import locale
+        return 'tr' if (locale.getlocale()[0] or '').lower().startswith('tr') else 'en'
+    except Exception:
+        return 'en'
+
+
+def load(preferences: Path) -> str:
+    """Pick the language from preferences.json, falling back to the system language."""
+    global LANG
+    try:
+        chosen = json.loads(Path(preferences).read_text(encoding='utf-8')).get('language')
+    except (OSError, ValueError, AttributeError):
+        chosen = None
+    LANG = chosen if chosen in LANGUAGES else system_language()
+    return LANG

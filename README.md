@@ -40,6 +40,10 @@ Plug the keyboard in with a USB cable and set its mode switch to wired. The app 
 | **Knowledge** | Everything we verified about the X68, ready to copy into an AI chat or export |
 | **Advanced** | Raw packets, settings backups and restore, and a key tester |
 
+## Language
+
+The interface is available in **English** and **Turkish (Türkçe)**. Pick one under **LANGUAGE** in the left column; the app offers to restart so the change takes effect. On first launch it follows the Windows display language. Translations live in `x68/i18n.py` with the English text as keys, so a missing translation falls back to English. Logs, backups, exported JSON and the Knowledge page stay in English.
+
 ## How it stays safe
 
 - **Nothing is written until you press Send.** Picking keys, colours, effects or files only changes the preview.
