@@ -29,7 +29,10 @@ class StudioTests(unittest.TestCase):
   self.assertLess(label.winfo_rootx()+label.winfo_width(),self.root.winfo_rootx()+self.root.winfo_width())
   self.assertLess(a.screen_scroll.yview()[1],1.0)
   a.scroll_screen(SimpleNamespace(widget=label,delta=-120,num=0));self.assertGreater(a.screen_scroll.yview()[0],0)
-  a.screen_scroll.yview_moveto(1);self.root.update_idletasks();self.assertAlmostEqual(a.screen_scroll.yview()[1],1.0)
+  a.screen_scroll.yview_moveto(1);self.root.update_idletasks()
+  # Tk snaps the view to whole yscrollincrement steps, so the bottom may overshoot by less than one step.
+  bottom=a.screen_scroll.yview()[1];region=a.screen_scroll.bbox('all');height=region[3]-region[1]
+  self.assertGreaterEqual(bottom,1.0);self.assertLess((bottom-1.0)*height,int(a.screen_scroll['yscrollincrement']))
  def test_clock_display_at_midnight_noon_and_evening(self):
   from datetime import datetime
   a=self.app
