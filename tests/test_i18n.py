@@ -55,6 +55,7 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual(i18n.upper('Bilgi', 'tr'), 'BİLGİ')
         self.assertEqual(i18n.upper('Işık', 'tr'), 'IŞIK')
         self.assertEqual(i18n.upper('Lighting', 'en'), 'LIGHTING')
+        self.assertEqual(i18n.pixel_caps('BİLGİ'), 'BILGI')
 
     def test_unknown_text_falls_back_to_english(self):
         self.assertEqual(i18n.t('Not in the catalogue', 'tr'), 'Not in the catalogue')

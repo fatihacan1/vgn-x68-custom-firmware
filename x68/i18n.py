@@ -14,6 +14,9 @@ from pathlib import Path
 LANGUAGES = {'en': 'English', 'tr': 'Türkçe'}
 LANG = 'en'
 
+# Labels drawn in the Press Start 2P pixel font (all-caps headings) use a plain I:
+# that font draws İ at lowercase height, so 'PİL' would read as 'PiL'. Body text
+# (DotGothic16 plus the system fallback) keeps the correct dotted İ.
 TR = {
     # Navigation and page titles
     'Home': 'Ana Sayfa',
@@ -39,8 +42,8 @@ TR = {
     'CUSTOM\nFIRMWARE': 'ÖZEL\nFIRMWARE',
     'COMMAND': 'MENÜ',
     'LINK': 'BAĞLANTI',
-    'LANGUAGE': 'DİL',
-    'BATTERY': 'PİL',
+    'LANGUAGE': 'DIL',
+    'BATTERY': 'PIL',
     'FIRMWARE': 'FIRMWARE',
     'Not connected': 'Bağlı değil',
     'LOOKING FOR X68': 'X68 ARANIYOR',
@@ -70,7 +73,7 @@ TR = {
     'SPEED': 'HIZ',
     'COLOUR': 'RENK',
     'MODE': 'MOD',
-    'PREVIEW': 'ÖNİZLEME',
+    'PREVIEW': 'ÖNIZLEME',
     'Keep': 'Koru',
     'Single': 'Tek renk',
     'Rainbow': 'Gökkuşağı',
@@ -88,12 +91,12 @@ TR = {
         '{key} rengi yerel taslağa eklendi. Tuş başına cihaza yükleme henüz doğrulanmadı.',
 
     # Keymap
-    'SELECTED KEY': 'SEÇİLİ TUŞ',
+    'SELECTED KEY': 'SEÇILI TUŞ',
     'Click a key on the board.': 'Şemadan bir tuşa tıklayın.',
     'ACTION TYPE': 'EYLEM TÜRÜ',
     'Keyboard': 'Klavye',
     'Media': 'Medya',
-    'NEW ACTION': 'YENİ EYLEM',
+    'NEW ACTION': 'YENI EYLEM',
     'Add to draft': 'Taslağa ekle',
     'Fn and reserved firmware functions stay protected.': 'Fn ve firmware\'e ayrılmış işlevler korunur.',
     'DRAFT': 'TASLAK',
@@ -117,7 +120,7 @@ TR = {
     'SLOT': 'YUVA',
     'White: slot holds\na macro.': 'Beyaz: yuvada\nmakro var.',
     'Load slot': 'Yuvayı yükle',
-    'SCRIPT': 'BETİK',
+    'SCRIPT': 'BETIK',
     'One shortcut or WAIT per line. Click a card above to add it.':
         'Her satıra bir kısayol veya WAIT yazın. Eklemek için yukarıdaki kartlara tıklayın.',
     'Check': 'Denetle',
@@ -133,7 +136,7 @@ TR = {
 
     # Battery
     'PACK VOLTAGE': 'BATARYA VOLTAJI',
-    'DEVICE LEVEL': 'CİHAZ SEVİYESİ',
+    'DEVICE LEVEL': 'CIHAZ SEVIYESI',
     'FULL': 'DOLU',
     'No report yet.': 'Henüz ölçüm yok.',
     'Plug in over USB to measure.': 'USB ile bağlayıp ölçün.',
@@ -209,9 +212,9 @@ TR = {
     'Select a build or inspect your own file, then explicitly click Install.':
         'Bir sürüm seçin veya kendi dosyanızı inceleyin, ardından açıkça Yükle\'ye tıklayın.',
     'Selected file:': 'Seçilen dosya:',
-    'ORIGINAL V0113': 'ORİJİNAL V0113',
-    'YOUR FIRMWARE': 'SİZİN FIRMWARE',
-    'X68 PIXEL DESKTOP': 'X68 PİKSEL MASAÜSTÜ',
+    'ORIGINAL V0113': 'ORIJINAL V0113',
+    'YOUR FIRMWARE': 'SIZIN FIRMWARE',
+    'X68 PIXEL DESKTOP': 'X68 PIKSEL MASAÜSTÜ',
     "VGN's factory firmware, unchanged. Use it to roll back.": 'VGN\'in değiştirilmemiş fabrika firmware\'i. Geri dönmek için kullanın.',
     'No trusted visual preview for an imported binary. Inspect its checks before installing.':
         'İçe aktarılan dosya için güvenilir önizleme yok. Yüklemeden önce kontrol sonuçlarını inceleyin.',
@@ -219,8 +222,8 @@ TR = {
     '\nBattery voltage readout for the Battery page.': '\nPil sayfası için batarya voltajı okuma.',
     '\nLive WIN/MAC and Windows-key lock in the header.': '\nBaşlıkta canlı WIN/MAC ve Windows tuşu kilidi.',
     '\nTheme illustration / sample time.': '\nTema çizimi / örnek saat.',
-    ' FACTORY FIRMWARE \n\n VGN V0113 ': ' FABRİKA FIRMWARE \n\n VGN V0113 ',
-    ' CUSTOM BINARY \n\n NO TRUSTED PREVIEW ': ' ÖZEL DOSYA \n\n GÜVENİLİR ÖNİZLEME YOK ',
+    ' FACTORY FIRMWARE \n\n VGN V0113 ': ' FABRIKA FIRMWARE \n\n VGN V0113 ',
+    ' CUSTOM BINARY \n\n NO TRUSTED PREVIEW ': ' ÖZEL DOSYA \n\n GÜVENILIR ÖNIZLEME YOK ',
     'Import the official updater or a V0113 .bin': 'Resmi güncelleyiciyi veya bir V0113 .bin dosyasını içe aktarın',
     'Firmware or official updater': 'Firmware veya resmi güncelleyici',
     'Not the official updater and not a 236,916-byte V0113 .bin.': 'Bu dosya ne resmi güncelleyici ne de 236.916 baytlık bir V0113 .bin.',
@@ -315,7 +318,7 @@ TR = {
     'Sync failed: ': 'Eşitleme başarısız: ',
 
     # Knowledge
-    'FACTS YOU CAN TAKE WITH YOU': 'YANINIZDA GÖTÜREBİLECEĞİNİZ BİLGİLER',
+    'FACTS YOU CAN TAKE WITH YOU': 'YANINIZDA GÖTÜREBILECEĞINIZ BILGILER',
     'Copy this context into an AI chat. Verified behavior and open questions are explicitly separated. No private device paths are included.':
         'Bu içeriği bir yapay zekâ sohbetine kopyalayın. Doğrulanmış davranışlar ve açık sorular ayrı tutulur. Cihaza özel yollar dahil edilmez. (İçerik İngilizcedir.)',
     'Copy AI context': 'YZ içeriğini kopyala',
@@ -389,6 +392,11 @@ def upper(text: str, lang: str | None = None) -> str:
     if (lang or LANG) == 'tr':
         text = text.replace('i', 'İ').replace('ı', 'I')
     return text.upper()
+
+
+def pixel_caps(text: str) -> str:
+    """For the Press Start 2P headings: replace İ, which that font draws at lowercase height."""
+    return text.replace('İ', 'I')
 
 
 def system_language() -> str:

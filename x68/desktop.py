@@ -163,7 +163,7 @@ class Studio:
  def show(self,name):
   if self.flashing:return
   for p in self.pages.values():p.pack_forget()
-  self.pages[name].pack(fill='both',expand=True);self.page_name=name;self.title.set(i18n.upper(t(name)))
+  self.pages[name].pack(fill='both',expand=True);self.page_name=name;self.title.set(i18n.pixel_caps(i18n.upper(t(name))))
   descriptions={'Lighting':'Preview an effect, then send it to the keyboard.','Keymap':'Pick a key on the board and give it a new action.','Macros':'Shortcuts stored on the keyboard itself.','Battery':'Measure the pack and watch it charge.','Firmware':'Reviewed X68 builds, installed only when you say so.','Advanced':'Raw data, backups and the key tester.'}
   descriptions.update(Screen='Send an image or GIF to the 160x96 screen.',Knowledge='Verified facts and open questions, ready to copy.',Home='Plug in over USB. Nothing is written until you press Send.')
   self.subtitle.set(t(descriptions[name]));self.hover_nav(self.nav_hover)
