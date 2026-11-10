@@ -564,7 +564,7 @@ class Studio:
   if self.inventory and self.inventory.get('transport')=='wireless':known={}
   self.installed.set(t('Installed: {build}  /  CRC {crc}').format(build=known.get(crc,t('Unrecognized build')),crc=crc) if known else t('Installed build: not reported over 2.4 GHz  /  receiver CRC {crc}').format(crc=crc))
   self.status.set(t('Version read complete / {build} / CRC {crc}').format(build=known.get(crc,t('Unknown build')),crc=crc))
-  if known and crc not in known:self.firmware_note.set(t('This keyboard runs firmware this app does not recognise (CRC {crc}). Installing firmware is blocked to protect it. Lighting, keys and macros still work.').format(crc=crc))
+  if known and crc not in known:self.firmware_note.set(self.firmware_block_message(crc))
  def choose_color(self):
   value=colorchooser.askcolor(color=self.color.get(),parent=self.root)[1]
   if value:self.color.set(value)
@@ -739,7 +739,7 @@ class Studio:
   if self.inventory.get('transport')=='wireless':return self.status.set(t('Firmware can only be installed over a USB cable. Set the keyboard switch to wired and plug in the cable.'))
   if not self.version:return self.status.set(t('Check the installed version first.'))
   if self.version.get('reported_crc') not in KNOWN_BUILDS:
-   message=t('This keyboard runs firmware this app does not recognise (CRC {crc}). Installing firmware is blocked to protect it. Lighting, keys and macros still work.').format(crc=self.version.get('reported_crc'))
+   message=self.firmware_block_message(self.version.get('reported_crc'))
    if not self.smoke:messagebox.showwarning(t('Unrecognised firmware'),message+'\n\n'+t('The builds here were made only for VGN\'s original V0113 firmware. Writing them over a different version could leave the keyboard unusable.'),parent=self.root)
    return self.status.set(message)
   danger=[t('This is YOUR UNREVIEWED CODE. Structural checks do not establish hardware compatibility; recovery may require a programmer.')] if unreviewed else []
@@ -863,6 +863,11 @@ class Studio:
  def smoke_done(self):
   result={'inventory_loaded':bool(self.inventory),'window_size':[self.root.winfo_width(),self.root.winfo_height()],'pages':list(self.pages),'english_ui':True,'no_automatic_settings_write':True,'firmware_install_requires_click':True}
   (WORK/'reports').mkdir(parents=True,exist_ok=True);(WORK/'reports/gui-smoke.json').write_text(json.dumps(result,indent=2),encoding='utf-8');print(json.dumps(result));self.close()
+ def firmware_block_message(self,crc):
+  """Why installing is blocked, and what to do. V0112 (the factory release before V0113) gets its own steps."""
+  if (self.inventory or {}).get('usb_release_hex')=='0112':
+   return t('Your keyboard has VGN\'s older factory firmware, V0112 (CRC {crc}). The builds here can only be installed on V0113, so installing is blocked to protect the keyboard. To use them: 1) update the keyboard to V0113 with VGN\'s official X68 updater (X68-V0113固件升级.exe), 2) reopen this app; it will then show Original V0113 and allow the install. Lighting, keys and macros already work on V0112.').format(crc=crc)
+  return t('This keyboard runs firmware this app does not recognise (CRC {crc}). Installing firmware is blocked to protect it. Lighting, keys and macros still work.').format(crc=crc)
  def unreviewed_toggled(self):
   if self.allow_unreviewed.get() and not messagebox.askyesno(t('Unreviewed firmware'),t('This lets you install a firmware file that nobody has checked. A wrong or broken file can make the keyboard stop working for good, and fixing it needs a hardware programmer.\n\nOnly continue if you know exactly what this file is. Turn this option on?'),icon='warning',default='no',parent=self.root):self.allow_unreviewed.set(False)
  def confirm_checklist(self,title,intro,checks,confirm,danger=''):

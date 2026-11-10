@@ -392,6 +392,8 @@ TR = {
     'This keyboard runs firmware this app does not recognise (CRC {crc}). Installing firmware is blocked to protect it. Lighting, keys and macros still work.':
         'Bu klavyede uygulamanın tanımadığı bir firmware var (CRC {crc}). Klavyeyi korumak için firmware yükleme engellendi. Aydınlatma, tuş atama ve makrolar yine çalışır.',
     'Unrecognised firmware': 'Tanınmayan firmware',
+    "Your keyboard has VGN's older factory firmware, V0112 (CRC {crc}). The builds here can only be installed on V0113, so installing is blocked to protect the keyboard. To use them: 1) update the keyboard to V0113 with VGN's official X68 updater (X68-V0113固件升级.exe), 2) reopen this app; it will then show Original V0113 and allow the install. Lighting, keys and macros already work on V0112.":
+        'Klavyenizde VGN\'in eski fabrika firmware\'i V0112 var (CRC {crc}). Buradaki sürümler yalnızca V0113 üzerine kurulabildiği için, klavyenizi korumak amacıyla yükleme engellendi. Kullanmak için: 1) klavyeyi VGN\'in resmi X68 güncelleyicisiyle (X68-V0113固件升级.exe) V0113\'e yükseltin, 2) bu uygulamayı yeniden açın; Original V0113 görünecek ve yüklemeye izin verilecek. Aydınlatma, tuş atama ve makrolar V0112\'de de çalışır.',
     "The builds here were made only for VGN's original V0113 firmware. Writing them over a different version could leave the keyboard unusable.":
         'Buradaki sürümler yalnızca VGN\'in orijinal V0113 firmware\'i için hazırlandı. Farklı bir sürümün üzerine yazmak klavyeyi kullanılamaz hale getirebilir.',
 
