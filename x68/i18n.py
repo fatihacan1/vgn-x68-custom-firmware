@@ -427,6 +427,50 @@ TR = {
     'Different from the keyboard now: {fields}.': 'Klavyedeki ayardan farklı olanlar: {fields}.',
     'Same as the keyboard now; sending changes nothing.': 'Klavyedeki ayarla aynı; göndermek bir şey değiştirmez.',
 
+    # Macros page
+    'WHAT IS A MACRO?': 'MAKRO NEDIR?',
+    'A macro makes one key press several keys for you, in order. For example, one key can copy, wait a moment and paste. Macros are stored inside the keyboard, so they work even when this app is closed.':
+        'Makro, tek bir tuşa bastığınızda sizin yerinize birkaç tuşa sırayla basar. Örneğin tek bir tuş kopyalayıp kısa bir an bekleyip yapıştırabilir. Makrolar klavyenin içinde saklanır; bu program kapalıyken de çalışır.',
+    '1. START FROM AN EXAMPLE': '1. BIR ÖRNEKLE BAŞLAYIN',
+    'Or write your own on the right.': 'Ya da sağda kendiniz yazın.',
+    '2. THE STEPS': '2. ADIMLAR',
+    '3. WHICH KEY RUNS IT?': '3. HANGI TUŞ ÇALIŞTIRSIN?',
+    'Copy and paste': 'Kopyala ve yapıştır',
+    'Select all and copy': 'Tümünü seç ve kopyala',
+    'Screenshot of an area': 'Ekran alıntısı al',
+    'Task Manager': 'Görev Yöneticisi',
+    'Show the desktop': 'Masaüstünü göster',
+    'Lock the computer': 'Bilgisayarı kilitle',
+    'Close the window': 'Pencereyi kapat',
+    'Undo three times': 'Üç kez geri al',
+    'One step per line:\n  CTRL+C  keys pressed together, joined with +\n  ENTER  a single key by its name (A, F5, ESC, SPACE...)\n  WAIT 100  wait 100 milliseconds before the next step\n  Click a card above to add it.':
+        'Her satır bir adımdır:\n  CTRL+C  birlikte basılan tuşlar, + ile birleştirilir\n  ENTER  tek bir tuş, adıyla (A, F5, ESC, SPACE...)\n  WAIT 100  sonraki adımdan önce 100 milisaniye bekle\n  Eklemek için yukarıdaki kartlara tıklayın.',
+    'Connect the keyboard to choose a key.': 'Tuş seçmek için klavyeyi bağlayın.',
+    'Choose a key from the list.': 'Listeden bir tuş seçin.',
+    'Right now this key sends: {action}': 'Bu tuş şu an şunu gönderiyor: {action}',
+    'Save macro to {key}': 'Makroyu {key} tuşuna kaydet',
+    'Save macro': 'Makroyu kaydet',
+    'Tip: pick a key you rarely use, such as Ins, PgUp or PgDn. That key will run the macro instead of its normal job. You can give it back its normal job on the Keymap page.':
+        'İpucu: Ins, PgUp veya PgDn gibi az kullandığınız bir tuş seçin. O tuş normal işi yerine makroyu çalıştıracak. Tuş Atama sayfasından eski işini geri verebilirsiniz.',
+    'Saved in slot': 'Kaydedileceği yuva',
+    'The keyboard keeps up to 16 macros. White numbers are slots already in use; a free slot is picked for you. To see what a slot holds, click it and press Load slot.':
+        'Klavye en fazla 16 makro saklar. Beyaz numaralar dolu yuvalardır; boş bir yuva sizin için otomatik seçilir. Bir yuvada ne olduğunu görmek için ona tıklayıp Yuvayı yükle\'ye basın.',
+    'Choose the key that should run the macro, then press Save macro.': 'Makroyu çalıştıracak tuşu seçin, sonra Makroyu kaydet\'e basın.',
+    'right': 'sağ', 'left': 'sol',
+    'The macro is empty. Add at least one step.': 'Makro boş. En az bir adım ekleyin.',
+    'This macro is valid: {count} key events. It is not saved yet.': 'Makro geçerli: {count} tuş olayı. Henüz kaydedilmedi.',
+    'Line {line}: "{name}" is not a key name this keyboard knows.': '{line}. satır: "{name}" bu klavyenin tanıdığı bir tuş adı değil.',
+    'Line {line}: WAIT needs a number of milliseconds, for example WAIT 100.': '{line}. satır: WAIT\'ten sonra milisaniye cinsinden bir sayı gelmeli, örneğin WAIT 100.',
+    'There is a mistake in the macro. Use one step per line, keys joined with + and WAIT followed by a number.':
+        'Makroda bir hata var. Her satıra bir adım yazın, tuşları + ile birleştirin, WAIT\'ten sonra bir sayı yazın.',
+    'Connect the keyboard first.': 'Önce klavyeyi bağlayın.',
+    'Choose the key that should run the macro first (step 3).': 'Önce makroyu çalıştıracak tuşu seçin (3. adım).',
+    'Save this macro to {key}?\n\nFrom now on, pressing {key} runs the macro instead of its normal job. You can undo this on the Keymap page or in Advanced > Restore settings backup.':
+        'Bu makro {key} tuşuna kaydedilsin mi?\n\nBundan sonra {key} tuşuna basınca normal işi yerine makro çalışacak. Bunu Tuş Atama sayfasından veya Gelişmiş > Ayar yedeğini geri yükle ile geri alabilirsiniz.',
+    # Battery chart
+    'No readings yet. Press Measure now or Start monitoring.': 'Henüz ölçüm yok. Şimdi ölç veya İzlemeyi başlat\'a basın.',
+    '{count} readings': '{count} ölçüm',
+
     # Background operations (shown as "<name>..." and "<name> complete.")
     '{operation} complete.': '{operation} tamamlandı.',
     '{operation} is still running. Please wait.': '{operation} hâlâ sürüyor. Lütfen bekleyin.',

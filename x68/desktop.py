@@ -26,6 +26,10 @@ PAGES=['Home','Lighting','Keymap','Macros','Screen','Battery','Firmware','Knowle
 # Builds are produced locally from the official payload; see firmware_source.
 BUILDS=list(firmware_source.BUILDS)
 CACHE=WORK/'firmware-cache'
+# Ready-made macros for the Macros page (name, script). Every key here is in settings.HID_KEYS/MODIFIERS.
+MACRO_EXAMPLES=[('Copy and paste','CTRL+C\nWAIT 150\nCTRL+V'),('Select all and copy','CTRL+A\nWAIT 50\nCTRL+C'),
+                ('Screenshot of an area','WIN+SHIFT+S'),('Task Manager','CTRL+SHIFT+ESC'),('Show the desktop','WIN+D'),
+                ('Lock the computer','WIN+L'),('Close the window','ALT+F4'),('Undo three times','CTRL+Z\nWAIT 50\nCTRL+Z\nWAIT 50\nCTRL+Z')]
 # Firmware the installer accepts as the starting point (device-reported CRC -> build name).
 KNOWN_BUILDS={'14961BE6':'Original V0113','EF331DCE':'Lavender Quest 0.4.0','4CB077DE':'Lavender Quest 0.4.1','FC2EBCFE':'Lavender Quest 0.4.2','3C866A9B':'Lavender Quest 0.5.0',LIVE_CLOCK_CRC:'Lavender Quest 0.5.1',BATTERY_DIAGNOSTIC_CRC:'Lavender Quest 0.6.0',CLOCK_FORMAT_CRC:'Lavender Quest 0.8.0',DEVICE_STATUS_CRC:'Lavender Quest 0.9.0',STATUS_BADGE_CRC:'Lavender Quest 0.9.1',RETRO_BADGE_CRC:'Lavender Quest 0.9.2'}
 EFFECTS=['Wave','Colour cloud','Vortex','Spectrum','Breathing','Solid','Reactive','Ripple','Trail','Stars','Flowers','Scroll','Wings','Build up','Rain','Scan','Spread','Fast wave','Custom table','Off']
@@ -133,7 +137,7 @@ class Studio:
   icon=ASSETS/'assets/icon.png'
   if icon.exists():
    photo=tk.PhotoImage(file=str(icon));self.photos.append(photo);root.iconphoto(True,photo)
-  self.type_status();self.tick_clock();self.apply_fonts(root)
+  self.type_status();self.tick_clock();self.apply_fonts(root);self.fluid_text()
   root.report_callback_exception=self.ui_error
   self.show('Home');root.protocol('WM_DELETE_WINDOW',self.close);root.after(60,self.pump);root.after(200,self.refresh)
   root.after(100,self.animate)
@@ -144,6 +148,16 @@ class Studio:
   f=ttk.Frame(parent);f.pack(fill='x',pady=7);return f
  def button(self,parent,text,command,accent=False):
   b=PixelButton(parent,text,command,accent,bg=parent.cget('background') if isinstance(parent,tk.Frame) else BG);b.pack(side='left',padx=(0,10));return b
+ def fluid_text(self,widget=None):
+  """Long labels follow the space they sit in instead of a fixed wrap length, so text is never cut off."""
+  for child in (widget or self.root).winfo_children():
+   if isinstance(child,(tk.Label,ttk.Label)):
+    try:wrap=int(str(child.cget('wraplength')) or 0)
+    except (ValueError,tk.TclError):wrap=0
+    if wrap>=800 and not getattr(child,'fluid',False):
+     child.fluid=True;margin=70 if child.master.master is getattr(self,'steps',None) else 40
+     child.master.bind('<Configure>',lambda e,label=child,m=margin:label.configure(wraplength=max(200,e.width-m)),add='+')
+   self.fluid_text(child)
  def apply_fonts(self,widget):
   if isinstance(widget,(ttk.Combobox,ttk.Entry,ttk.Spinbox)):widget.configure(font=BODY)
   for child in widget.winfo_children():self.apply_fonts(child)
@@ -282,22 +296,75 @@ class Studio:
   if self.target.get() not in values:self.target.set(values[0])
 
  def _macros(self):
-  p=self.pages['Macros'];left=pixel.panel(p,t('SLOT'));left.pack(side='left',fill='y')
-  self.slot=tk.IntVar(value=1)
-  self.slot_choice=pixel.Choice(left,self.slot,[(n,f'{n:02d}') for n in range(1,17)],columns=4,width=4,marks=self.slot_used);self.slot_choice.pack(anchor='w')
-  tk.Label(left,text=t('White: slot holds\na macro.'),font=BODY,bg=PANEL,fg=MUTED,justify='left').pack(anchor='w',pady=(12,12))
-  f=tk.Frame(left,bg=PANEL);f.pack(anchor='w');self.button(f,t('Load slot'),self.load_macro)
-  right=ttk.Frame(p);right.pack(side='left',fill='both',expand=True,padx=(12,0))
-  ed=pixel.panel(right,t('SCRIPT'));ed.pack(fill='both',expand=True)
+  p=self.pages['Macros']
+  intro=pixel.panel(p,t('WHAT IS A MACRO?'));intro.pack(fill='x')
+  tk.Label(intro,text=t('A macro makes one key press several keys for you, in order. For example, one key can copy, wait a moment and paste. Macros are stored inside the keyboard, so they work even when this app is closed.'),font=BODY,bg=PANEL,fg=INK,wraplength=880,justify='left',anchor='w').pack(fill='x')
+  row=ttk.Frame(p);row.pack(fill='both',expand=True,pady=(12,0))
+  examples=pixel.panel(row,t('1. START FROM AN EXAMPLE'));examples.pack(side='left',fill='y')
+  for name,script in MACRO_EXAMPLES:
+   b=PixelButton(examples,t(name),lambda s=script:self.use_example(s),bg=PANEL);b.pack(anchor='w',pady=(0,6))
+  tk.Label(examples,text=t('Or write your own on the right.'),font=BODY,bg=PANEL,fg=MUTED).pack(anchor='w',pady=(6,0))
+  ed=pixel.panel(row,t('2. THE STEPS'));ed.pack(side='left',fill='both',expand=True,padx=(12,0))
   chips=tk.Frame(ed,bg=PANEL);chips.pack(fill='x',pady=(0,10))
   for token in ('CTRL+C','CTRL+V','CTRL+Z','ALT+TAB','ENTER','WAIT 100'):
    chip=tk.Label(chips,text=token,font=BODY,bg=pixel.LINE_DK,fg=INK,padx=8,pady=2,cursor='hand2');chip.pack(side='left',padx=(0,6))
    chip.bind('<Button-1>',lambda e,t=token:self.insert_token(t))
-  self.editor=tk.Text(ed,height=10,bg=pixel.DESK,fg=MINT,insertbackground=MINT,insertwidth=8,font=BODY,padx=12,pady=10,relief='flat',bd=0,undo=True,highlightthickness=2,highlightbackground=pixel.LINE_DK,highlightcolor=MINT)
+  self.editor=tk.Text(ed,height=7,bg=pixel.DESK,fg=MINT,insertbackground=MINT,insertwidth=8,font=BODY,padx=12,pady=10,relief='flat',bd=0,undo=True,highlightthickness=2,highlightbackground=pixel.LINE_DK,highlightcolor=MINT)
   self.editor.pack(fill='both',expand=True);self.editor.insert('1.0','CTRL+C\nWAIT 150\nCTRL+V')
-  tk.Label(ed,text=t('One shortcut or WAIT per line. Click a card above to add it.'),font=BODY,bg=PANEL,fg=MUTED).pack(anchor='w',pady=(8,0))
-  f=ttk.Frame(right);f.pack(fill='x',pady=(12,0));self.button(f,t('Check'),self.check_macro);self.button(f,t('Save to selected key'),self.save_macro,True)
-  self.macro_note=tk.StringVar(value=t('Pick the target key in Keymap first.'));tk.Label(right,textvariable=self.macro_note,font=BODY,bg=BG,fg=MINT,wraplength=560,justify='left').pack(anchor='w',pady=(10,0))
+  self.editor.bind('<KeyRelease>',lambda e:self.check_macro(),add='+')
+  self.macro_check=tk.StringVar();self.macro_check_label=tk.Label(ed,textvariable=self.macro_check,font=BODY,bg=PANEL,fg=MINT,anchor='w',justify='left',wraplength=560);self.macro_check_label.pack(fill='x',pady=(8,0))
+  tk.Label(ed,text=t('One step per line:\n  CTRL+C  keys pressed together, joined with +\n  ENTER  a single key by its name (A, F5, ESC, SPACE...)\n  WAIT 100  wait 100 milliseconds before the next step\n  Click a card above to add it.'),font=BODY,bg=PANEL,fg=MUTED,justify='left',anchor='w').pack(fill='x',pady=(8,0))
+  target=pixel.panel(p,t('3. WHICH KEY RUNS IT?'));target.pack(fill='x',pady=(12,0))
+  f=tk.Frame(target,bg=PANEL);f.pack(anchor='w')
+  self.macro_key=tk.StringVar();self.macro_key_combo=ttk.Combobox(f,textvariable=self.macro_key,state='disabled',width=18);self.macro_key_combo.pack(side='left')
+  self.macro_key_combo.bind('<<ComboboxSelected>>',lambda e:self.pick_macro_key())
+  self.macro_key_note=tk.StringVar(value=t('Connect the keyboard to choose a key.'));tk.Label(f,textvariable=self.macro_key_note,font=BODY,bg=PANEL,fg=INK,anchor='w').pack(side='left',padx=(12,0))
+  tk.Label(target,text=t('Tip: pick a key you rarely use, such as Ins, PgUp or PgDn. That key will run the macro instead of its normal job. You can give it back its normal job on the Keymap page.'),font=BODY,bg=PANEL,fg=AMBER,wraplength=880,justify='left',anchor='w').pack(fill='x',pady=(10,0))
+  slots=tk.Frame(target,bg=PANEL);slots.pack(fill='x',pady=(10,0))
+  tk.Label(slots,text=t('Saved in slot'),font=BODY,bg=PANEL,fg=MUTED).pack(side='left',padx=(0,10))
+  self.slot=tk.IntVar(value=1)
+  self.slot_choice=pixel.Choice(slots,self.slot,[(n,f'{n:02d}') for n in range(1,17)],columns=8,width=4,marks=self.slot_used);self.slot_choice.pack(side='left')
+  tk.Label(target,text=t('The keyboard keeps up to 16 macros. White numbers are slots already in use; a free slot is picked for you. To see what a slot holds, click it and press Load slot.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=880,justify='left',anchor='w').pack(fill='x',pady=(6,0))
+  f=ttk.Frame(p);f.pack(fill='x',pady=(12,0))
+  self.macro_save_button=self.button(f,t('Save macro'),self.save_macro,True);self.button(f,t('Load slot'),self.load_macro);self.button(f,t('Check'),self.check_macro)
+  self.macro_note=tk.StringVar(value=t('Choose the key that should run the macro, then press Save macro.'));tk.Label(p,textvariable=self.macro_note,font=BODY,bg=BG,fg=MINT,wraplength=880,justify='left',anchor='w').pack(fill='x',pady=(10,0))
+  self.check_macro()
+ def macro_keys(self):
+  """(label, key) for physical keys that can run a macro; left/right twins get a side in their label."""
+  counts={}
+  for label,key,*_ in LAYOUT:counts[label]=counts.get(label,0)+1
+  found=[]
+  for label,key,*_ in LAYOUT:
+   if self.lookup(key) is None:continue
+   if counts[label]>1:label=label+' ('+t('right' if key.startswith('R') else 'left')+')'
+   found.append((label,key))
+  return found
+ def refresh_macro_keys(self):
+  keys=self.macro_keys();self.macro_choices=dict(keys)
+  self.macro_key_combo.configure(values=[label for label,_ in keys],state='readonly' if keys else 'disabled')
+  self.sync_macro_target()
+ def sync_macro_target(self):
+  """Mirror the selected key (shared with the Keymap page) in the macro key picker."""
+  if not hasattr(self,'macro_choices'):return
+  label=next((l for l,k in self.macro_choices.items() if self.selected is not None and self.lookup(k)==self.selected),'')
+  self.macro_key.set(label)
+  if not label:return self.macro_key_note.set(t('Choose a key from the list.') if self.macro_choices else t('Connect the keyboard to choose a key.'))
+  entry=next(k for k in self.settings['keys'] if k['index']==self.selected)
+  self.macro_key_note.set(t('Right now this key sends: {action}').format(action=entry['name']))
+  self.macro_save_button.configure(text=t('Save macro to {key}').format(key=label))
+ def pick_macro_key(self):
+  key=self.macro_choices.get(self.macro_key.get())
+  index=self.lookup(key) if key else None
+  if index is None:return
+  self.selected=index;self.update_selection();self.draw_boards(only=('map',))
+  entry=next(k for k in self.settings['keys'] if k['index']==index)
+  if entry['flag'] in (112,113):self.slot.set((entry['code']>>8)+1);self.load_macro()
+  else:
+   free=next((n for n in range(1,17) if not self.slot_used(n)),None)
+   if free:self.slot.set(free)
+  self.slot_choice.refresh();self.sync_macro_target()
+ def use_example(self,script):
+  self.editor.delete('1.0','end');self.editor.insert('1.0',script);self.editor.edit_separator();self.check_macro()
  def slot_used(self,slot):
   return bool(self.settings and any(m['slot']==slot and m['events'] for m in self.settings.get('macros',[])))
  def insert_token(self,token):
@@ -320,7 +387,7 @@ class Studio:
   f=ttk.Frame(right);f.pack(anchor='w');self.button(f,t('Measure now'),self.read_battery,True);self.start_battery_button=self.button(f,t('Start monitoring'),self.start_monitor);self.stop_battery_button=self.button(f,t('Stop'),self.stop_monitor);self.stop_battery_button.configure(state='disabled')
   self.battery_warning=tk.Label(p,text=t('SAFETY: these steps mean opening the keyboard and powering a lithium battery from outside. Lithium batteries can get hot, swell or catch fire. If you are not comfortable with electronics, take it to a repair shop instead. Never leave it unattended.'),font=BODY,bg=BG,fg=PINK,wraplength=880,justify='left',anchor='w')
   self.steps=ttk.Frame(p);self.steps.pack(fill='x',pady=(12,0))
-  self.chart=tk.Canvas(p,height=84,bg=PANEL,highlightthickness=2,highlightbackground=pixel.LINE_DK);self.chart.pack(fill='x',pady=(8,6));self.chart.bind('<Configure>',lambda event:self.draw_chart())
+  self.chart=tk.Canvas(p,height=170,bg=PANEL,highlightthickness=2,highlightbackground=pixel.LINE_DK);self.chart.pack(fill='x',pady=(8,6));self.chart.bind('<Configure>',lambda event:self.draw_chart())
   f=ttk.Frame(p);f.pack(fill='x');tk.Label(f,textvariable=self.monitor_note,font=BODY,bg=BG,fg=MINT).pack(side='left');tk.Label(f,textvariable=self.trend_note,font=BODY,bg=BG,fg=AMBER).pack(side='left',padx=16)
   tk.Label(f,text=t('EXPORT'),font=LABEL,bg=BG,fg=MUTED,cursor='hand2').pack(side='right');f.winfo_children()[-1].bind('<Button-1>',lambda e:self.save_json(self.history.report(),'battery-session.json'))
   self.trend=ChargeTrend();self.health=None
@@ -336,6 +403,7 @@ class Studio:
    row=ttk.Frame(self.steps);row.pack(fill='x',pady=1)
    tk.Label(row,text=f'{number}.',font=HEAD,bg=BG,fg=MINT,width=3,anchor='w').pack(side='left',anchor='n')
    tk.Label(row,text=text,font=BODY,bg=BG,fg=INK,wraplength=820,justify='left').pack(side='left',anchor='w')
+  self.fluid_text(self.steps)
  def start_monitor(self):
   self.monitoring=True;self.next_battery=0;self.trend.clear();self.monitor_state();self.status.set(t('Battery monitoring started / every 5 seconds.'))
  def stop_monitor(self):
@@ -590,7 +658,7 @@ class Studio:
   self.editable=[k for k in result['keys'] if k['editable']]
   self.source_combo.configure(values=[t('Cell')+f" {k['index']:03d}  /  {k['name']}" for k in self.editable])
   self.update_selection()
-  self.lighting_changed()
+  self.lighting_changed();self.refresh_macro_keys()
   self.status.set(t('Settings loaded. Nothing is written until you press Send.'));self.next_clock_sync=0;self.draw_boards();self.slot_choice.refresh()
   if not self.version:self.read_version()
  def read_version(self):self.submit('Checking installed build',self.client.query_version,self.show_version)
@@ -683,7 +751,7 @@ class Studio:
   if entry is None:
    self.selected=None;self.selection.set(t('Select an editable source key.'));return
   key=next((name for name,index in PHYSICAL_KEY_INDICES.items() if index==self.selected),t('Matrix cell {index}').format(index=self.selected))
-  self.selection.set(t('{key}\nnow sends {action}').format(key=key,action=entry['name']))
+  self.selection.set(t('{key}\nnow sends {action}').format(key=key,action=entry['name']));self.sync_macro_target()
   if entry['name'] in HID_KEYS or entry['name'] in MODIFIERS or entry['name'] in MEDIA_KEYS:
    self.action_type.set(t('Media' if entry['name'] in MEDIA_KEYS else 'Keyboard'))
    self.change_action_type();self.target.set(entry['name'])
@@ -707,9 +775,19 @@ class Studio:
    if self.pending_mapping.get(index)==target:self.pending_mapping.pop(index)
   self.mapping_summary();self.status.set(t('Keymap sent and verified.'));self.root.after(100,self.read_settings)
  def check_macro(self):
+  text=self.editor.get('1.0','end')
+  if not text.strip():self.macro_check_label.configure(fg=AMBER);return self.macro_check.set(t('The macro is empty. Add at least one step.'))
   try:
-   block=compile_macro(self.editor.get('1.0','end'));self.macro_note.set(t('Valid macro / {count} events. Not saved yet.').format(count=int.from_bytes(block[:2],"little")))
-  except Exception:self.macro_note.set(t('Invalid macro. Use balanced DOWN / UP events and valid WAIT values.'))
+   block=compile_macro(text);self.macro_check_label.configure(fg=MINT);self.macro_check.set('✓ '+t('This macro is valid: {count} key events. It is not saved yet.').format(count=int.from_bytes(block[:2],'little')))
+  except Exception as error:
+   self.macro_check_label.configure(fg=PINK);self.macro_check.set('✗ '+self.explain_macro_error(str(error)))
+ def explain_macro_error(self,message):
+  import re
+  found=re.match(r"Line (\d+): unknown key '(.*)'\.",message)
+  if found:return t('Line {line}: "{name}" is not a key name this keyboard knows.').format(line=found.group(1),name=found.group(2))
+  found=re.match(r'Line (\d+): WAIT expects milliseconds\.',message)
+  if found:return t('Line {line}: WAIT needs a number of milliseconds, for example WAIT 100.').format(line=found.group(1))
+  return t('There is a mistake in the macro. Use one step per line, keys joined with + and WAIT followed by a number.')
  def load_macro(self):
   if not self.settings:return
   macro=next((m for m in self.settings['macros'] if m['slot']==self.slot.get()),None)
@@ -717,8 +795,13 @@ class Studio:
   except Exception:return self.macro_note.set(t('This slot contains events the text editor cannot represent.'))
   self.editor.delete('1.0','end');self.editor.insert('1.0',text);self.macro_note.set(t('Slot loaded from the keyboard.' if macro else 'Empty slot. Write a new macro.'))
  def save_macro(self):
-  if self.selected is None:return self.macro_note.set(t('Pick the target key in Keymap first, then come back here.'))
+  if not self.settings:return self.macro_note.set(t('Connect the keyboard first.'))
+  if self.selected is None:return self.macro_note.set(t('Choose the key that should run the macro first (step 3).'))
   text=self.editor.get('1.0','end');slot=self.slot.get()-1
+  try:compile_macro(text)
+  except Exception as error:return self.macro_note.set(self.explain_macro_error(str(error)))
+  key=self.macro_key.get() or next((name for name,index in PHYSICAL_KEY_INDICES.items() if index==self.selected),str(self.selected))
+  if not self.smoke and not messagebox.askokcancel(t('Save macro'),t('Save this macro to {key}?\n\nFrom now on, pressing {key} runs the macro instead of its normal job. You can undo this on the Keymap page or in Advanced > Restore settings backup.').format(key=key),icon='warning',default='cancel',parent=self.root):return
   self.submit('Saving macro',lambda:self.settings_client.assign_macro(self.selected,slot,text),lambda value:self.root.after(50,self.read_settings))
  def read_battery(self):
   version=dict(self.version or {})
@@ -749,18 +832,34 @@ class Studio:
   self.next_battery=time.monotonic()+5;self.draw_chart();self.monitor_state()
   self.status.set(t('Battery read complete at {stamp} / {value}.').format(stamp=stamp,value=self.percent.get()))
  def draw_chart(self):
-  c=self.chart;c.delete('all');width=max(c.winfo_width(),600);height=max(c.winfo_height(),60)-4;data=self.history.samples[-200:]
-  volts=any(item.get('health') for item in data);top=4.4 if volts else 100;y=lambda v:int((height-10-(v/top)*(height-24))/4)*4
-  if volts:
-   for level,name in ((3.0,'3.0 V'),(4.07,t('FULL'))):
-    for x in range(8,width-60,8):c.create_rectangle(x,y(level),x+3,y(level)+1,fill=pixel.LINE_DK,outline='')
-    c.create_text(width-10,y(level),text=name,fill=MUTED,anchor='e',font=LABEL)
-  step=max(4,(width-80)//max(1,len(data))//4*4)
-  for i,item in enumerate(data):
-   value=item['health']['pack_volts_estimate'] if item.get('health') else (None if volts else item.get('level_raw'))
-   if item.get('transport')!='available' or value is None:continue
-   x=8+i*step;c.create_rectangle(x,y(value)-4,x+step-1,y(value),fill=MINT,outline='')
-  c.create_text(10,10,text=t('PACK VOLTAGE' if volts else 'DEVICE LEVEL'),fill=MUTED,anchor='nw',font=LABEL)
+  """Line chart of recent readings: pack voltage (0.6.0 builds) or the device-reported level."""
+  c=self.chart;c.delete('all');width=max(c.winfo_width(),600);height=max(c.winfo_height(),120)
+  data=[item for item in self.history.samples[-200:] if item.get('transport')=='available']
+  volts=any(item.get('health') for item in data)
+  points=[]
+  for item in data:
+   value=item['health']['pack_volts_estimate'] if item.get('health') else (None if volts else (item.get('reported_percent') if item.get('reported_percent') is not None else item.get('level_raw')))
+   if value is not None:points.append((item.get('observed_at','')[11:19],value))
+  left,right,top,bottom=56,width-70,28,height-24
+  low,high=(2.8,4.4) if volts else (0,100)
+  y=lambda v:bottom-(min(max(v,low),high)-low)/(high-low)*(bottom-top)
+  c.create_text(10,8,text=t('PACK VOLTAGE' if volts else 'DEVICE LEVEL'),fill=MUTED,anchor='nw',font=LABEL)
+  grid=((3.0,'3.0 V'),(3.5,'3.5 V'),(4.07,t('FULL'))) if volts else ((0,'0 %'),(50,'50 %'),(100,'100 %'))
+  for level,name in grid:
+   for x in range(left,right,8):c.create_rectangle(x,y(level),x+3,y(level)+1,fill=pixel.LINE_DK,outline='')
+   c.create_text(left-8,y(level),text=name,fill=MUTED,anchor='e',font=LABEL)
+  if not points:
+   c.create_text((left+right)/2,(top+bottom)/2,text=t('No readings yet. Press Measure now or Start monitoring.'),fill=MUTED,font=BODY);return
+  step=(right-left)/max(1,len(points)-1)
+  xy=[(left+i*step if len(points)>1 else right,y(v)) for i,(_,v) in enumerate(points)]
+  if len(xy)>1:c.create_line(*[n for p in xy for n in p],fill=MINT,width=2)
+  if len(xy)<=60:
+   for x,yy in xy:c.create_rectangle(x-2,yy-2,x+2,yy+2,fill=MINT,outline='')
+  last=points[-1][1];x,yy=xy[-1]
+  c.create_text(x+8,yy,text=f'{last:.2f} V' if volts else f'{last} %',fill=INK,anchor='w',font=BODY)
+  c.create_text(left,bottom+6,text=points[0][0],fill=MUTED,anchor='nw',font=LABEL)
+  if len(points)>1:c.create_text(right,bottom+6,text=points[-1][0],fill=MUTED,anchor='ne',font=LABEL)
+  c.create_text((left+right)/2,bottom+6,text=t('{count} readings').format(count=len(points)),fill=MUTED,anchor='n',font=LABEL)
 
  def install(self):
   if self.busy:return self.status.set(t('{operation} is still running. Please wait.').format(operation=t(self.operation)))
