@@ -237,8 +237,8 @@ TR = {
     'Choose a valid firmware file first.': 'Önce geçerli bir firmware dosyası seçin.',
     'This binary is unreviewed. Enable the explicit unreviewed-file option before installing.':
         'Bu dosya incelenmemiş. Yüklemeden önce incelenmemiş dosya seçeneğini açıkça etkinleştirin.',
-    '\n\nThis is YOUR UNREVIEWED CODE. Structural checks do not establish hardware compatibility; recovery may require a programmer.':
-        '\n\nBu SİZİN İNCELENMEMİŞ KODUNUZ. Yapısal kontroller donanım uyumluluğunu kanıtlamaz; kurtarmak için programlayıcı gerekebilir.',
+    'This is YOUR UNREVIEWED CODE. Structural checks do not establish hardware compatibility; recovery may require a programmer.':
+        'Bu SİZİN İNCELENMEMİŞ KODUNUZ. Yapısal kontroller donanım uyumluluğunu kanıtlamaz; kurtarmak için programlayıcı gerekebilir.',
     'Install firmware': 'Firmware yükle',
     'Install {name}?': '{name} yüklensin mi?',
     '\n\nThe official V0113 firmware is downloaded from VGN once if it is not cached yet.\nKeep USB connected in wired mode until verification completes.\nSettings are backed up before writing.':
@@ -251,7 +251,7 @@ TR = {
     'Unrecognized build': 'Tanınmayan sürüm',
     'Unknown build': 'Bilinmeyen sürüm',
     'Version read complete / {build} / CRC {crc}': 'Sürüm okundu / {build} / CRC {crc}',
-    'Writing packet {done} / {total}': 'Paket yazılıyor {done} / {total}',
+    'Writing packet {done} / {total}. Do not unplug the keyboard.': 'Paket yazılıyor {done} / {total}. Klavyeyi çıkarmayın.',
     'Update stopped. Check Advanced logs before retrying; no automatic retry was sent.':
         'Güncelleme durdu. Tekrar denemeden önce Gelişmiş sayfasındaki kayıtlara bakın; otomatik yeniden deneme yapılmadı.',
 
@@ -356,6 +356,46 @@ TR = {
     'Interface error recorded in Advanced. Other actions remain available.':
         'Arayüz hatası Gelişmiş sayfasına kaydedildi. Diğer işlemler kullanılabilir.',
     'Wait for the device transfer to finish before closing.': 'Kapatmadan önce cihaz aktarımının bitmesini bekleyin.',
+
+    # Safety warnings
+    'Made a mistake? Every send is backed up first. Undo it in Advanced > Restore settings backup.':
+        'Yanlış mı oldu? Her gönderimden önce yedek alınır. Gelişmiş > Ayar yedeğini geri yükle ile geri alabilirsiniz.',
+    'SAFETY: these steps mean opening the keyboard and powering a lithium battery from outside. Lithium batteries can get hot, swell or catch fire. If you are not comfortable with electronics, take it to a repair shop instead. Never leave it unattended.':
+        'GÜVENLİK: Bu adımlar klavyeyi açmayı ve lityum bataryaya dışarıdan güç vermeyi gerektirir. Lityum piller ısınabilir, şişebilir veya alev alabilir. Elektronik konusunda emin değilseniz bir teknik servise götürün. Bataryayı asla başından ayrılarak bırakmayın.',
+    "CAUTION: installing firmware rewrites the keyboard's own internal software. If it is interrupted (cable unplugged, power cut, computer goes to sleep) the keyboard may stop working. Lighting, keys and macros do NOT need a firmware install.":
+        'DİKKAT: Firmware yüklemek klavyenin kendi iç yazılımını değiştirir. İşlem yarıda kesilirse (kablo çıkarsa, elektrik giderse, bilgisayar uykuya geçerse) klavye çalışmayabilir. Aydınlatma, tuş atama ve makrolar için firmware yüklemeniz GEREKMEZ.',
+    'Connect the X68 with a USB cable before installing firmware.': 'Firmware yüklemeden önce X68\'i USB kablosuyla bağlayın.',
+    'Firmware can only be installed over a USB cable. Set the keyboard switch to wired and plug in the cable.':
+        'Firmware yalnızca USB kablosuyla yüklenebilir. Klavyedeki anahtarı kablolu konuma getirin ve kabloyu takın.',
+    'This computer is running on battery. Plug in the charger before you continue.':
+        'Bu bilgisayar şu an pille çalışıyor. Devam etmeden önce şarj cihazını takın.',
+    "Firmware is the keyboard's own internal software; installing replaces it and takes a few minutes.":
+        'Firmware, klavyenin kendi iç yazılımıdır; yükleme onu değiştirir ve birkaç dakika sürer.',
+    'The keyboard is connected with a USB cable and its switch is set to wired.': 'Klavye USB kablosuyla bağlı ve anahtarı kablolu konumda.',
+    'The computer is plugged into power (a laptop is on its charger).': 'Bilgisayar prize takılı (dizüstüyse şarj cihazı takılı).',
+    'I will not unplug the cable, close this app, or shut down or sleep the computer until it says the installation is complete.':
+        'Yükleme tamamlandı yazana kadar kabloyu çıkarmayacağım, bu uygulamayı kapatmayacağım, bilgisayarı kapatmayacağım veya uyku moduna almayacağım.',
+    'I understand that if the installation is interrupted, the keyboard may stop working and need special hardware to recover.':
+        'Yükleme yarıda kesilirse klavyenin çalışmayabileceğini ve kurtarmak için özel donanım gerekebileceğini anlıyorum.',
+    'Install': 'Yükle',
+    'Cancel': 'Vazgeç',
+    'Tick every box to continue:': 'Devam etmek için tüm kutuları işaretleyin:',
+    "Restore this backup?\n\nThe keyboard's current lighting, keymap and macros will be replaced with the ones in the backup.":
+        'Bu yedek geri yüklensin mi?\n\nKlavyedeki mevcut aydınlatma, tuş atamaları ve makrolar yedektekilerle değiştirilecek.',
+    'Transfer in progress': 'Aktarım sürüyor',
+    'Do not close the app or unplug the keyboard yet. Closing now could leave the keyboard unusable. Wait until it says the transfer is complete.':
+        'Uygulamayı henüz kapatmayın ve klavyeyi çıkarmayın. Şimdi kapatmak klavyeyi kullanılamaz hale getirebilir. Aktarımın tamamlandığı yazana kadar bekleyin.',
+    'Unreviewed firmware': 'İncelenmemiş firmware',
+    'This lets you install a firmware file that nobody has checked. A wrong or broken file can make the keyboard stop working for good, and fixing it needs a hardware programmer.\n\nOnly continue if you know exactly what this file is. Turn this option on?':
+        'Bu seçenek, kimsenin kontrol etmediği bir firmware dosyasını yüklemenize izin verir. Yanlış veya bozuk bir dosya klavyeyi kalıcı olarak bozabilir; düzeltmek için donanım programlayıcısı gerekir.\n\nYalnızca bu dosyanın ne olduğunu kesin olarak biliyorsanız devam edin. Bu seçenek açılsın mı?',
+
+    'This keyboard runs firmware this app does not recognise (CRC {crc}). Installing firmware is blocked to protect it. Lighting, keys and macros still work.':
+        'Bu klavyede uygulamanın tanımadığı bir firmware var (CRC {crc}). Klavyeyi korumak için firmware yükleme engellendi. Aydınlatma, tuş atama ve makrolar yine çalışır.',
+    'Unrecognised firmware': 'Tanınmayan firmware',
+    "Your keyboard has VGN's older factory firmware, V0112 (CRC {crc}). The builds here can only be installed on V0113, so installing is blocked to protect the keyboard. To use them: 1) on VGN's official page download.vgnlab.com.cn/firmware open VGN X68 and download the middle item, X68 键盘固件 (X68-V0113固件升级.exe, 2,580,992 bytes); 2) close this app, connect the keyboard by USB cable in wired mode with the computer on mains power, run the updater and wait for OTA Success; 3) reopen this app: it should show Original V0113 and allow the install. Lighting, keys and macros already work on V0112.":
+        'Klavyenizde VGN\'in eski fabrika firmware\'i V0112 var (CRC {crc}). Buradaki sürümler yalnızca V0113 üzerine kurulabildiği için, klavyenizi korumak amacıyla yükleme engellendi. Kullanmak için: 1) VGN\'in resmi sayfası download.vgnlab.com.cn/firmware adresinde VGN X68\'i açın ve ortadaki X68 键盘固件 dosyasını indirin (X68-V0113固件升级.exe, 2.580.992 bayt); 2) bu uygulamayı kapatın, klavyeyi kablolu modda USB kablosuyla bağlayın, bilgisayar prize takılı olsun, güncelleyiciyi çalıştırıp OTA Success yazısını bekleyin; 3) bu uygulamayı yeniden açın: Original V0113 görünmeli ve yüklemeye izin verilmeli. Aydınlatma, tuş atama ve makrolar V0112\'de de çalışır.',
+    "The builds here were made only for VGN's original V0113 firmware. Writing them over a different version could leave the keyboard unusable.":
+        'Buradaki sürümler yalnızca VGN\'in orijinal V0113 firmware\'i için hazırlandı. Farklı bir sürümün üzerine yazmak klavyeyi kullanılamaz hale getirebilir.',
 
     # Background operations (shown as "<name>..." and "<name> complete.")
     '{operation} complete.': '{operation} tamamlandı.',
