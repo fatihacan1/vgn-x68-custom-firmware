@@ -260,10 +260,10 @@ TR = {
     'Choose image / GIF': 'Resim / GIF seç',
     'Upload': 'Yükle',
     'PNG, JPG, GIF, WEBP or BMP. Long GIFs are sampled to 8 frames.': 'PNG, JPG, GIF, WEBP veya BMP. Uzun GIF\'lerden 8 kare alınır.',
-    'SCENE': 'SAHNE',
-    'Upload replaces the custom animation bank. Switch back to the clock scene at any time.':
-        'Yükleme özel animasyon bankasının yerine geçer. İstediğiniz zaman saat sahnesine dönebilirsiniz.',
-    'Lavender desktop': 'Lavender masaüstü',
+    'SCENE': 'EKRAN GÖRÜNÜMÜ',
+    'The keyboard screen shows either the clock scene or the image/GIF you upload. A new upload replaces the previous one. Press the button below to go back to the clock scene.':
+        'Klavyenin ekranı ya saat sahnesini ya da yüklediğiniz resmi/GIF\'i gösterir. Yeni bir yükleme öncekinin yerine geçer. Saat sahnesine dönmek için aşağıdaki düğmeye basın.',
+    'Lavender desktop': 'Saat sahnesine dön',
     'CLOCK': 'SAAT',
     'Sync time automatically': 'Saati otomatik eşitle',
     'Every': 'Her',
@@ -396,6 +396,121 @@ TR = {
         'Klavyenizde VGN\'in eski fabrika firmware\'i V0112 var (CRC {crc}). Buradaki sürümler yalnızca V0113 üzerine kurulabildiği için, klavyenizi korumak amacıyla yükleme engellendi. Kullanmak için: 1) VGN\'in resmi sayfası download.vgnlab.com.cn/firmware adresinde VGN X68\'i açın ve ortadaki X68 键盘固件 dosyasını indirin (X68-V0113固件升级.exe, 2.580.992 bayt); 2) bu uygulamayı kapatın, klavyeyi kablolu modda USB kablosuyla bağlayın, bilgisayar prize takılı olsun, güncelleyiciyi çalıştırıp OTA Success yazısını bekleyin; 3) bu uygulamayı yeniden açın: Original V0113 görünmeli ve yüklemeye izin verilmeli. Aydınlatma, tuş atama ve makrolar V0112\'de de çalışır.',
     "The builds here were made only for VGN's original V0113 firmware. Writing them over a different version could leave the keyboard unusable.":
         'Buradaki sürümler yalnızca VGN\'in orijinal V0113 firmware\'i için hazırlandı. Farklı bir sürümün üzerine yazmak klavyeyi kullanılamaz hale getirebilir.',
+
+    # Lighting preview
+    'Colours flow across the keyboard from left to right.': 'Renkler klavyede soldan sağa akar.',
+    'Soft clouds of colour drift and blend slowly.': 'Yumuşak renk bulutları yavaşça süzülür ve birbirine karışır.',
+    'Colours spin around the centre of the keyboard.': 'Renkler klavyenin ortası etrafında döner.',
+    'The whole keyboard cycles through every colour together.': 'Tüm klavye aynı anda sırayla bütün renklere geçer.',
+    'Keys slowly fade in and out, like breathing.': 'Tuşlar nefes alır gibi yavaşça yanıp söner.',
+    'Every key stays on one steady colour.': 'Bütün tuşlar sabit tek bir renkte kalır.',
+    'Only the keys you press light up, then fade away.': 'Yalnızca bastığınız tuşlar yanar, sonra yavaşça söner.',
+    'Each key press sends a ring of light outwards.': 'Her tuş basışı dışa doğru yayılan bir ışık halkası oluşturur.',
+    'A light runs across the keys, leaving a fading tail.': 'Bir ışık tuşların üzerinde koşar, arkasında sönen bir iz bırakır.',
+    'Random keys twinkle on and off like stars.': 'Rastgele tuşlar yıldızlar gibi parıldar.',
+    'Patches of colour bloom open and fade, one after another.': 'Renk lekeleri çiçek gibi açılır ve sırayla solar.',
+    'Bands of colour scroll up the keyboard row by row.': 'Renk şeritleri sıra sıra yukarı doğru kayar.',
+    'Colours spread outwards from the middle to both sides.': 'Renkler ortadan iki yana doğru kanat gibi açılır.',
+    'Keys light up column by column until the board is full.': 'Tuşlar sütun sütun yanar, klavye dolana kadar birikir.',
+    'Drops of light fall down the keyboard.': 'Işık damlaları klavyede yukarıdan aşağı düşer.',
+    'A bar of light sweeps from side to side.': 'Bir ışık çubuğu bir yandan öbür yana tarar.',
+    'Rings of colour keep spreading out from the centre.': 'Renk halkaları ortadan sürekli dışa yayılır.',
+    'The wave effect, flowing much faster.': 'Dalga efektinin çok daha hızlı akan hâli.',
+    'Plays the per-key colour table stored on the keyboard; shown here as one colour.':
+        'Klavyede kayıtlı tuş başına renk tablosunu oynatır; burada tek renk olarak gösterilir.',
+    'All lighting is switched off.': 'Tüm aydınlatma kapalıdır.',
+    'The animation is an approximation; Send shows the real effect on the keyboard.':
+        'Animasyon yaklaşıktır; gerçek efekti görmek için klavyeye gönderin.',
+    'Key draft is local only and is never sent to the keyboard.': 'Tuş taslağı yalnızca bu bilgisayardadır, klavyeye asla gönderilmez.',
+    'Send will write: {effect} / brightness {brightness}/4 / speed {speed}/4 / colour {colour} / mode {mode}':
+        'Gönderilecek: {effect} / parlaklık {brightness}/4 / hız {speed}/4 / renk {colour} / mod {mode}',
+    "The keyboard's current lighting has not been read yet.": 'Klavyedeki mevcut aydınlatma henüz okunmadı.',
+    'effect': 'efekt', 'brightness': 'parlaklık', 'speed': 'hız', 'colour': 'renk', 'mode': 'mod',
+    'Different from the keyboard now: {fields}.': 'Klavyedeki ayardan farklı olanlar: {fields}.',
+    'Same as the keyboard now; sending changes nothing.': 'Klavyedeki ayarla aynı; göndermek bir şey değiştirmez.',
+
+    # Macros page
+    'WHAT IS A MACRO?': 'MAKRO NEDIR?',
+    'A macro makes one key press several keys for you, in order. For example, one key can copy, wait a moment and paste. Macros are stored inside the keyboard, so they work even when this app is closed.':
+        'Makro, tek bir tuşa bastığınızda sizin yerinize birkaç tuşa sırayla basar. Örneğin tek bir tuş kopyalayıp kısa bir an bekleyip yapıştırabilir. Makrolar klavyenin içinde saklanır; bu program kapalıyken de çalışır.',
+    '1. START FROM AN EXAMPLE': '1. BIR ÖRNEKLE BAŞLAYIN',
+    'Or write your own on the right.': 'Ya da sağda kendiniz yazın.',
+    '2. THE STEPS': '2. ADIMLAR',
+    '3. WHICH KEY RUNS IT?': '3. HANGI TUŞ ÇALIŞTIRSIN?',
+    'Copy and paste': 'Kopyala ve yapıştır',
+    'Select all and copy': 'Tümünü seç ve kopyala',
+    'Screenshot of an area': 'Ekran alıntısı al',
+    'Task Manager': 'Görev Yöneticisi',
+    'Show the desktop': 'Masaüstünü göster',
+    'Lock the computer': 'Bilgisayarı kilitle',
+    'Close the window': 'Pencereyi kapat',
+    'Undo three times': 'Üç kez geri al',
+    'One step per line:\n  CTRL+C  keys pressed together, joined with +\n  ENTER  a single key by its name (A, F5, ESC, SPACE...)\n  WAIT 100  wait 100 milliseconds before the next step\n  Click a card above to add it.':
+        'Her satır bir adımdır:\n  CTRL+C  birlikte basılan tuşlar, + ile birleştirilir\n  ENTER  tek bir tuş, adıyla (A, F5, ESC, SPACE...)\n  WAIT 100  sonraki adımdan önce 100 milisaniye bekle\n  Eklemek için yukarıdaki kartlara tıklayın.',
+    'Connect the keyboard to choose a key.': 'Tuş seçmek için klavyeyi bağlayın.',
+    'Choose a key from the list.': 'Listeden bir tuş seçin.',
+    'Right now this key sends: {action}': 'Bu tuş şu an şunu gönderiyor: {action}',
+    'Save macro to {key}': 'Makroyu {key} tuşuna kaydet',
+    'Save macro': 'Makroyu kaydet',
+    'Tip: pick a key you rarely use, such as Ins, PgUp or PgDn. That key will run the macro instead of its normal job. You can give it back its normal job on the Keymap page.':
+        'İpucu: Ins, PgUp veya PgDn gibi az kullandığınız bir tuş seçin. O tuş normal işi yerine makroyu çalıştıracak. Tuş Atama sayfasından eski işini geri verebilirsiniz.',
+    'Saved in slot': 'Kaydedileceği yuva',
+    'The keyboard keeps up to 16 macros. White numbers are slots already in use; a free slot is picked for you. To see what a slot holds, click it and press Load slot.':
+        'Klavye en fazla 16 makro saklar. Beyaz numaralar dolu yuvalardır; boş bir yuva sizin için otomatik seçilir. Bir yuvada ne olduğunu görmek için ona tıklayıp Yuvayı yükle\'ye basın.',
+    'Choose the key that should run the macro, then press Save macro.': 'Makroyu çalıştıracak tuşu seçin, sonra Makroyu kaydet\'e basın.',
+    'right': 'sağ', 'left': 'sol',
+    'The macro is empty. Add at least one step.': 'Makro boş. En az bir adım ekleyin.',
+    'This macro is valid: {count} key events. It is not saved yet.': 'Makro geçerli: {count} tuş olayı. Henüz kaydedilmedi.',
+    'Line {line}: "{name}" is not a key name this keyboard knows.': '{line}. satır: "{name}" bu klavyenin tanıdığı bir tuş adı değil.',
+    'Line {line}: WAIT needs a number of milliseconds, for example WAIT 100.': '{line}. satır: WAIT\'ten sonra milisaniye cinsinden bir sayı gelmeli, örneğin WAIT 100.',
+    'There is a mistake in the macro. Use one step per line, keys joined with + and WAIT followed by a number.':
+        'Makroda bir hata var. Her satıra bir adım yazın, tuşları + ile birleştirin, WAIT\'ten sonra bir sayı yazın.',
+    'Connect the keyboard first.': 'Önce klavyeyi bağlayın.',
+    'Choose the key that should run the macro first (step 3).': 'Önce makroyu çalıştıracak tuşu seçin (3. adım).',
+    'Save this macro to {key}?\n\nFrom now on, pressing {key} runs the macro instead of its normal job. You can undo this on the Keymap page or in Advanced > Restore settings backup.':
+        'Bu makro {key} tuşuna kaydedilsin mi?\n\nBundan sonra {key} tuşuna basınca normal işi yerine makro çalışacak. Bunu Tuş Atama sayfasından veya Gelişmiş > Ayar yedeğini geri yükle ile geri alabilirsiniz.',
+    # Battery chart
+    'No readings yet. Press Measure now or Start monitoring.': 'Henüz ölçüm yok. Şimdi ölç veya İzlemeyi başlat\'a basın.',
+    '{count} readings': '{count} ölçüm',
+
+    # Firmware preview and screen legend
+    'Newest, recommended. Windows logo (four colours) or Apple logo, a WIN/MAC chip and a padlock that shows the Windows-key lock. Includes everything from the older builds.':
+        'En yeni sürüm, önerilen. Dört renkli Windows logosu veya Apple logosu, WIN/MAC rozeti ve Windows tuşu kilidini gösteren asma kilit. Eski sürümlerdeki her şey dahil.',
+    'Windows/Apple logo and padlock badges (cyan Windows logo with a coloured rail). Includes everything from the older builds.':
+        'Windows/Apple logosu ve asma kilit rozeti (mavi Windows logosu ve renkli bir çizgi). Eski sürümlerdeki her şey dahil.',
+    'Header shows WIN/MAC and L:ON/L:OFF as text. Includes everything from the older builds.':
+        'Üst şeritte WIN/MAC ve L:ON/L:OFF yazı olarak görünür. Eski sürümlerdeki her şey dahil.',
+    'Adds the 12-hour AM/PM clock. Includes everything from the older builds.': '12 saatlik (AM/PM) saat seçeneğini ekler. Eski sürümlerdeki her şey dahil.',
+    'Adds the real battery voltage on the Battery page. The screen looks the same as 0.5.1.': 'Pil sayfasına gerçek batarya voltajını ekler. Ekran 0.5.1 ile aynı görünür.',
+    'First stable build: purple pixel scene, clock set from the computer, image/GIF player and a battery badge on the screen.':
+        'İlk kararlı sürüm: mor piksel sahne, bilgisayardan ayarlanan saat, resim/GIF oynatıcı ve ekranda pil rozeti.',
+    'This build is installed on your keyboard now.': 'Bu sürüm şu an klavyenizde yüklü.',
+    'Live preview of this build: the clock runs, and the Windows/Mac and lock badges change every few seconds to show what they look like.':
+        'Bu sürümün canlı önizlemesi: saat işler; Windows/Mac ve kilit rozetleri nasıl göründüklerini göstermek için birkaç saniyede bir değişir.',
+    'ON THE SCREEN': 'EKRANDA NE VAR?',
+    "Top-left logo and WIN/MAC: the keyboard's Windows or Mac mode. Fn + A switches to Windows, Fn + S to Mac (0.9.0 and newer).":
+        'Sol üstteki logo ve WIN/MAC: klavyenin Windows ya da Mac modu. Fn + A Windows\'a, Fn + S Mac\'e geçirir (0.9.0 ve üstü).',
+    'Padlock at the top right: the Windows-key lock, so the Windows key cannot interrupt a game. Fn + Windows key turns it on or off. Gold and closed = locked, green and open = unlocked.':
+        'Sağ üstteki asma kilit: Windows tuşu kilidi; oyun oynarken Windows tuşuna yanlışlıkla basınca masaüstüne atılmazsınız. Fn + Windows tuşu ile açılıp kapanır. Altın ve kapalı = kilitli, yeşil ve açık = kilitsiz.',
+    'Big clock and DD/MM date: set from this computer (Screen page > Clock). They keep running when the app is closed, until the keyboard loses power.':
+        'Büyük saat ve GÜN/AY tarihi: bu bilgisayardan ayarlanır (Ekran sayfası > Saat). Uygulama kapalıyken de işlemeye devam eder; klavyenin gücü tamamen kesilene kadar.',
+    'Battery at the bottom: the battery level the keyboard reports.': 'Alttaki pil: klavyenin bildirdiği pil seviyesi.',
+    'X68.EXE, CLOCK, DAY-MO, START and READY: decorative pixel-game text. They have no function.':
+        'X68.EXE, CLOCK, DAY-MO, START ve READY: piksel oyun havası veren süs yazıları. Bir işlevleri yok.',
+    'The bunny blinks and the coin spins: animation only.': 'Tavşanın göz kırpması ve dönen altın para: yalnızca animasyon.',
+    'Fn + PgUp steps through the screen modes. On Lavender the first modes all show this same clock scene and the last one shows your uploaded image/GIF, so press it a few times until your image appears. The Screen page buttons switch directly.':
+        "Fn + PgUp ekran modları arasında sırayla gezer. Lavender'da ilk modların hepsi bu saat sahnesini, sonuncusu ise yüklediğiniz resmi/GIF'i gösterir; resminiz gelene kadar birkaç kez basın. Ekran sayfasındaki düğmeler doğrudan geçiş yapar.",
+
+    # Screen picker
+    'Show my image/GIF': 'Resmimi/GIF\'imi göster',
+    'Connect the keyboard to see which screen is showing.': 'Hangi ekranın açık olduğunu görmek için klavyeyi bağlayın.',
+    'The keyboard has 5 screen modes (0-4); Fn + PgUp / PgDn steps through them. On Lavender, modes 0-3 all show the clock scene and mode 4 shows your uploaded image/GIF.':
+        'Klavyede 5 ekran modu var (0-4); Fn + PgUp / PgDn bunlar arasında sırayla gezer. Lavender\'da 0-3 arası modların hepsi saat sahnesini, 4. mod ise yüklediğiniz resmi/GIF\'i gösterir.',
+    'Upload an image or GIF first; there is nothing to show yet.': 'Önce bir resim veya GIF yükleyin; henüz gösterilecek bir şey yok.',
+    'Your image/GIF is now on the keyboard screen.': 'Resminiz/GIF\'iniz şu an klavye ekranında.',
+    'Showing now: screen {mode} - {what}': 'Şu an açık: {mode}. ekran - {what}',
+    'your image/GIF': 'sizin resminiz/GIF\'iniz',
+    'clock scene': 'saat sahnesi',
 
     # Background operations (shown as "<name>..." and "<name> complete.")
     '{operation} complete.': '{operation} tamamlandı.',
