@@ -16,7 +16,9 @@ class MacStartupTests(unittest.TestCase):
             with patch.object(sys,'platform','darwin'),patch.object(sys,'frozen',True,create=True),patch.object(sys,'executable','/Applications/VGN X68 Custom Firmware.app/Contents/MacOS/VGN-X68-Custom-Firmware-0.9.2-macOS'),patch.object(autostart,'_agent_path',return_value=agent),patch.object(autostart.subprocess,'run') as run:
                 self.assertFalse(autostart.enabled());autostart.configure(True)
                 data=plistlib.loads(agent.read_bytes())
-                self.assertEqual(data['ProgramArguments'],['/usr/bin/open','-a','/Applications/VGN X68 Custom Firmware.app'])
+                # resolve() is platform-native: '/Applications/...' on macOS, 'C:\Applications\...' when this runs on Windows.
+                bundle=str(Path('/Applications/VGN X68 Custom Firmware.app').resolve())
+                self.assertEqual(data['ProgramArguments'],['/usr/bin/open','-a',bundle])
                 self.assertTrue(data['RunAtLoad']);self.assertNotIn('KeepAlive',data)
                 self.assertTrue(autostart.enabled());run.assert_not_called()
                 autostart.configure(False);self.assertFalse(agent.exists());self.assertFalse(autostart.enabled())
