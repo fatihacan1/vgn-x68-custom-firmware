@@ -102,8 +102,10 @@ def main():
             print(json.dumps({"error": str(error)}, ensure_ascii=False), file=sys.stderr)
             return 1
     import tkinter as tk
+    from x68 import i18n
+    from x68.desktop import Studio, WORK
+    i18n.load(WORK / 'preferences.json')
     root = tk.Tk()
-    from x68.desktop import Studio
     application = Studio(root, smoke=args.smoke)
     if args.monitor_battery and not args.smoke:
         application.battery_panel.start_monitor()
