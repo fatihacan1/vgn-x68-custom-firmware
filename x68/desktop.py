@@ -9,8 +9,8 @@ from .protocol import X68Client
 from .settings import SettingsClient, HID_KEYS, MODIFIERS, MEDIA_KEYS, PHYSICAL_KEY_INDICES, compile_macro, macro_text
 from .battery import query_battery, BatteryHistory
 from .battery_health import ASSUMPTION, ChargeTrend, estimate
-from .firmware import LIVE_CLOCK_CRC, LIVE_CLOCK_CRCS, BATTERY_DIAGNOSTIC_CRC, BATTERY_DIAGNOSTIC_CRCS, CLOCK_FORMAT_CRC, CLOCK_FORMAT_CRCS, DEVICE_STATUS_CRC, STATUS_BADGE_CRC, RETRO_BADGE_CRC
-from .media import convert_media, upload_media, set_screen
+from .firmware import MULTI_SCREEN_CRC, MULTI_SCREEN_CRCS, LIVE_CLOCK_CRC, LIVE_CLOCK_CRCS, BATTERY_DIAGNOSTIC_CRC, BATTERY_DIAGNOSTIC_CRCS, CLOCK_FORMAT_CRC, CLOCK_FORMAT_CRCS, DEVICE_STATUS_CRC, STATUS_BADGE_CRC, RETRO_BADGE_CRC
+from .media import convert_media, upload_media, upload_screens, set_screen, MAX_FRAMES, SCREENS
 from . import autostart, firmware_source, safety
 from PIL import Image, ImageTk, ImageOps
 from . import pixel, i18n, effects, lcd_preview
@@ -27,7 +27,8 @@ PAGES=['Home','Lighting','Keymap','Macros','Screen','Battery','Firmware','Knowle
 BUILDS=list(firmware_source.BUILDS)
 CACHE=WORK/'firmware-cache'
 # What each Lavender Quest build gives you (cumulative; newest first in the list).
-BUILD_NOTES={'lavender-quest-0.9.2':'Newest, recommended. Windows logo (four colours) or Apple logo, a WIN/MAC chip and a padlock that shows the Windows-key lock. Includes everything from the older builds.',
+BUILD_NOTES={'lavender-quest-0.10.0':'Experimental. The same screen as 0.9.2, plus screens 1-4 can each show their own image or GIF (Screen page). Built and emulator-tested in this fork; not yet reviewed by the original author.',
+             'lavender-quest-0.9.2':'Newest, recommended. Windows logo (four colours) or Apple logo, a WIN/MAC chip and a padlock that shows the Windows-key lock. Includes everything from the older builds.',
              'lavender-quest-0.9.1':'Windows/Apple logo and padlock badges (cyan Windows logo with a coloured rail). Includes everything from the older builds.',
              'lavender-quest-0.9.0':'Header shows WIN/MAC and L:ON/L:OFF as text. Includes everything from the older builds.',
              'lavender-quest-0.8.0':'Adds the 12-hour AM/PM clock. Includes everything from the older builds.',
@@ -39,13 +40,13 @@ LCD_LEGEND=['Top-left logo and WIN/MAC: the keyboard\'s Windows or Mac mode. Fn 
             'Battery at the bottom: the battery level the keyboard reports.',
             'X68.EXE, CLOCK, DAY-MO, START and READY: decorative pixel-game text. They have no function.',
             'The bunny blinks and the coin spins: animation only.',
-            'Fn + PgUp steps through the screen modes. On Lavender the first modes all show this same clock scene and the last one shows your uploaded image/GIF, so press it a few times until your image appears. The Screen page buttons switch directly.']
+            'Fn + PgUp steps through the screen modes 0-4. On 0.10.0 screen 0 is the clock and screens 1-4 each show their own image (an empty one shows the clock). On older builds modes 0-3 all show the clock and mode 4 shows your image. The Screen page buttons switch directly.']
 # Ready-made macros for the Macros page (name, script). Every key here is in settings.HID_KEYS/MODIFIERS.
 MACRO_EXAMPLES=[('Copy and paste','CTRL+C\nWAIT 150\nCTRL+V'),('Select all and copy','CTRL+A\nWAIT 50\nCTRL+C'),
                 ('Screenshot of an area','WIN+SHIFT+S'),('Task Manager','CTRL+SHIFT+ESC'),('Show the desktop','WIN+D'),
                 ('Lock the computer','WIN+L'),('Close the window','ALT+F4'),('Undo three times','CTRL+Z\nWAIT 50\nCTRL+Z\nWAIT 50\nCTRL+Z')]
 # Firmware the installer accepts as the starting point (device-reported CRC -> build name).
-KNOWN_BUILDS={'14961BE6':'Original V0113','EF331DCE':'Lavender Quest 0.4.0','4CB077DE':'Lavender Quest 0.4.1','FC2EBCFE':'Lavender Quest 0.4.2','3C866A9B':'Lavender Quest 0.5.0',LIVE_CLOCK_CRC:'Lavender Quest 0.5.1',BATTERY_DIAGNOSTIC_CRC:'Lavender Quest 0.6.0',CLOCK_FORMAT_CRC:'Lavender Quest 0.8.0',DEVICE_STATUS_CRC:'Lavender Quest 0.9.0',STATUS_BADGE_CRC:'Lavender Quest 0.9.1',RETRO_BADGE_CRC:'Lavender Quest 0.9.2'}
+KNOWN_BUILDS={MULTI_SCREEN_CRC:'Lavender Quest 0.10.0','14961BE6':'Original V0113','EF331DCE':'Lavender Quest 0.4.0','4CB077DE':'Lavender Quest 0.4.1','FC2EBCFE':'Lavender Quest 0.4.2','3C866A9B':'Lavender Quest 0.5.0',LIVE_CLOCK_CRC:'Lavender Quest 0.5.1',BATTERY_DIAGNOSTIC_CRC:'Lavender Quest 0.6.0',CLOCK_FORMAT_CRC:'Lavender Quest 0.8.0',DEVICE_STATUS_CRC:'Lavender Quest 0.9.0',STATUS_BADGE_CRC:'Lavender Quest 0.9.1',RETRO_BADGE_CRC:'Lavender Quest 0.9.2'}
 EFFECTS=['Wave','Colour cloud','Vortex','Spectrum','Breathing','Solid','Reactive','Ripple','Trail','Stars','Flowers','Scroll','Wings','Build up','Rain','Scan','Spread','Fast wave','Custom table','Off']
 ROWS=[
  [('Esc','ESC',1),*[(str(n),str(n),1) for n in range(1,10)],('0','0',1),('-','-',1),('=','=',1),('Back','BACKSPACE',2)],
@@ -513,22 +514,24 @@ class Studio:
   if preview.exists():
    with Image.open(preview) as source:photo=ImageTk.PhotoImage(source.resize((400,240),Image.Resampling.NEAREST))
    self.photos.append(photo);self.screen_preview.configure(image=photo)
-  f=tk.Frame(left,bg=PANEL);f.pack(fill='x',pady=(12,0))
+  self.single_upload=tk.Frame(left,bg=PANEL);self.single_upload.pack(fill='x')
+  f=tk.Frame(self.single_upload,bg=PANEL);f.pack(fill='x',pady=(12,0))
   self.fit=tk.StringVar(value='Crop');pixel.Choice(f,self.fit,[(v,t(v)) for v in ('Crop','Fit','Stretch')],columns=3).pack(side='left')
   self.fit.trace_add('write',lambda *args:self.reconvert())
-  f=tk.Frame(left,bg=PANEL);f.pack(fill='x',pady=(10,0));self.button(f,t('Choose image / GIF'),self.choose_media);self.button(f,t('Upload'),self.send_media,True)
+  f=tk.Frame(self.single_upload,bg=PANEL);f.pack(fill='x',pady=(10,0));self.button(f,t('Choose image / GIF'),self.choose_media);self.button(f,t('Upload'),self.send_media,True)
   self.media_note=tk.StringVar(value=t('PNG, JPG, GIF, WEBP or BMP. Long GIFs are sampled to 8 frames.'))
-  tk.Label(left,textvariable=self.media_note,font=BODY,bg=PANEL,fg=MINT,wraplength=400,justify='left').pack(anchor='w',pady=(10,6))
+  self.media_note_label=tk.Label(left,textvariable=self.media_note,font=BODY,bg=PANEL,fg=MINT,wraplength=400,justify='left');self.media_note_label.pack(anchor='w',pady=(10,6))
   self.media_progress=ttk.Progressbar(left,maximum=100);self.media_progress.pack(fill='x')
+  self._screens(left)
   right=ttk.Frame(p);right.pack(side='left',fill='both',expand=True,padx=(12,0))
   scene=pixel.panel(right,t('SCENE'));scene.pack(fill='x')
   scene_note=tk.Label(scene,text=t('The keyboard screen shows either the clock scene or the image/GIF you upload. A new upload replaces the previous one. Press the button below to go back to the clock scene.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=340,justify='left',anchor='w');scene_note.pack(fill='x',pady=(0,10))
   scene.bind('<Configure>',lambda e:scene_note.configure(wraplength=max(120,e.width-32)))
-  f=tk.Frame(scene,bg=PANEL);f.pack(anchor='w');self.button(f,t('Lavender desktop'),lambda:self.change_screen(0));self.button(f,t('Show my image/GIF'),lambda:self.change_screen(4))
+  f=tk.Frame(scene,bg=PANEL);f.pack(anchor='w');self.button(f,t('Lavender desktop'),lambda:self.change_screen(0));self.show_image_button=self.button(f,t('Show my image/GIF'),lambda:self.change_screen(4))
   self.screen_mode_note=tk.StringVar(value=t('Connect the keyboard to see which screen is showing.'))
   tk.Label(scene,textvariable=self.screen_mode_note,font=BODY,bg=PANEL,fg=MINT,wraplength=880,justify='left',anchor='w').pack(fill='x',pady=(8,0))
-  tk.Label(scene,text=t('The keyboard has 5 screen modes (0-4); Fn + PgUp / PgDn steps through them. On Lavender, modes 0-3 all show the clock scene and mode 4 shows your uploaded image/GIF.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=880,justify='left',anchor='w').pack(fill='x',pady=(4,0))
-  self.lcd_legend(scene,PANEL)
+  self.screen_modes_note=tk.StringVar(value=t('The keyboard has 5 screen modes (0-4); Fn + PgUp / PgDn steps through them. On Lavender, modes 0-3 all show the clock scene and mode 4 shows your uploaded image/GIF.'))
+  tk.Label(scene,textvariable=self.screen_modes_note,font=BODY,bg=PANEL,fg=MUTED,wraplength=880,justify='left',anchor='w').pack(fill='x',pady=(4,0))
   clock=pixel.panel(right,t('CLOCK'));clock.pack(fill='both',expand=True,pady=(12,0))
   ttk.Checkbutton(clock,text=t('Sync time automatically'),variable=self.auto_clock,command=self.clock_preference,style='Field.TCheckbutton').pack(anchor='w',pady=4)
   f=tk.Frame(clock,bg=PANEL);f.pack(anchor='w',pady=6);tk.Label(f,text=t('Every'),font=BODY,bg=PANEL,fg=INK).pack(side='left')
@@ -545,6 +548,117 @@ class Studio:
   ram_note=tk.Label(clock,text=t('Time and format stay in RAM. After a full power loss, reopen the app to sync again.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=340,justify='left',anchor='w');ram_note.pack(fill='x',pady=(10,0))
   clock.bind('<Configure>',lambda e:[label.configure(wraplength=max(120,e.width-32)) for label in (self.clock_note_label,help_note,ram_note)])
 
+ def _screens(self,parent):
+  """Screens 1-4, each with its own image/GIF (Lavender Quest 0.10.0)."""
+  panel=pixel.panel(parent,t('SEPARATE SCREENS'));panel.pack(fill='x',pady=(14,0))
+  tk.Label(panel,text=t('With Lavender Quest 0.10.0, screens 1-4 each show their own image or GIF and Fn + PgUp steps through them. Screen 0 is always the clock. All screens share 8 frames.'),font=BODY,bg=PANEL,fg=MUTED,wraplength=380,justify='left',anchor='w').pack(fill='x')
+  self.screen_slots=[None]*SCREENS;self.slot_thumbs=[None]*SCREENS;self.slot_info=[];self.slot_images=[]
+  self.slot_fit=[tk.StringVar(value='Crop') for _ in range(SCREENS)]
+  for index in range(SCREENS):
+   row=tk.Frame(panel,bg=PANEL);row.pack(fill='x',pady=(8,0))
+   tk.Label(row,text=t('Screen {n}').format(n=index+1),font=BODY,bg=PANEL,fg=INK,anchor='w',width=8).pack(side='left')
+   image=tk.Label(row,bg=pixel.DESK,width=10,height=3);image.pack(side='left',padx=(0,8));self.slot_images.append(image)
+   info=tk.StringVar(value=t('empty'));self.slot_info.append(info)
+   tk.Label(row,textvariable=info,font=BODY,bg=PANEL,fg=MUTED,anchor='w',width=9).pack(side='left')
+   fit=tk.Frame(panel,bg=PANEL);fit.pack(fill='x',pady=(4,0))
+   pixel.Choice(fit,self.slot_fit[index],[(v,t(v)) for v in ('Crop','Fit','Stretch')],columns=3).pack(side='left')
+   self.slot_fit[index].trace_add('write',lambda *args,n=index:self.refit_screen_media(n))
+   buttons=tk.Frame(panel,bg=PANEL);buttons.pack(fill='x',pady=(4,0))
+   self.button(buttons,t('Choose'),lambda n=index:self.choose_screen_media(n))
+   self.button(buttons,t('Clear'),lambda n=index:self.clear_screen_media(n))
+   self.button(buttons,t('Show'),lambda n=index:self.change_screen(n+1))
+  self.frame_budget=tk.StringVar();tk.Label(panel,textvariable=self.frame_budget,font=BODY,bg=PANEL,fg=MINT,anchor='w').pack(fill='x',pady=(10,0))
+  f=tk.Frame(panel,bg=PANEL);f.pack(anchor='w',pady=(8,0));self.screens_button=self.button(f,t('Upload all screens'),self.send_screens,True)
+  self.screens_note=tk.StringVar(value='');tk.Label(panel,textvariable=self.screens_note,font=BODY,bg=PANEL,fg=AMBER,wraplength=380,justify='left',anchor='w').pack(fill='x',pady=(6,0))
+  self.load_screen_choices()
+ def live_screen_media(self):
+  """(index, media) for the screen the keyboard shows now, when that screen has a picture chosen here."""
+  mode=self.parameter_byte(33)
+  if not mode or not 1<=mode<=SCREENS:return None
+  media=self.screen_slots[mode-1]
+  return (mode-1,media) if media is not None else None
+ def screen_frames_used(self,skip=None):
+  return sum(len(m.frames) for i,m in enumerate(self.screen_slots) if m is not None and i!=skip)
+ def refresh_screen_rows(self):
+  for index,media in enumerate(self.screen_slots):
+   if media is None:
+    self.slot_info[index].set(t('empty'));self.slot_images[index].configure(image='',width=10,height=3);self.slot_thumbs[index]=None
+   else:
+    self.slot_info[index].set(t('{count} frames').format(count=len(media.frames)))
+    self.slot_thumbs[index]=ImageTk.PhotoImage(media.frames[0].resize((80,48),Image.Resampling.NEAREST))
+    self.slot_images[index].configure(image=self.slot_thumbs[index],width=80,height=48)
+  self.frame_budget.set(t('Frames used: {used} / {total}').format(used=self.screen_frames_used(),total=MAX_FRAMES))
+  multi=(self.version or {}).get('reported_crc') in MULTI_SCREEN_CRCS
+  self.screens_note.set('' if multi else t('Needs Lavender Quest 0.10.0 (experimental) from the Firmware page. On other builds screens 1-3 show the clock.'))
+  if hasattr(self,'show_image_button'):self.screen_layout()
+ def save_screen_choices(self):
+  self.save_preferences(screens=[None if m is None else {'path':m.source,'fit':m.fit,'frames':len(m.frames)} for m in self.screen_slots])
+ def load_screen_choices(self):
+  try:preferences=json.loads((WORK/'preferences.json').read_text(encoding='utf-8'))
+  except (OSError,ValueError):preferences={}
+  for index,entry in enumerate((preferences.get('screens') or [])[:SCREENS]):
+   if not entry:continue
+   if entry.get('fit') in ('Crop','Fit','Stretch'):self.slot_fit[index].set(entry['fit'])
+   try:self.screen_slots[index]=convert_media(entry['path'],entry.get('fit','Crop'),max_frames=max(1,min(MAX_FRAMES,int(entry.get('frames',MAX_FRAMES)))))
+   except (OSError,ValueError,KeyError):self.screen_slots[index]=None
+  if self.screen_frames_used()>MAX_FRAMES:self.screen_slots=[None]*SCREENS
+  self.refresh_screen_rows()
+ def choose_screen_media(self,index):
+  if self.busy:return
+  room=MAX_FRAMES-self.screen_frames_used(skip=index)
+  if room<1 and not messagebox.askyesno(t('No frames left'),t('All 8 frames are in use. Share them out evenly between the screens so this one fits too? GIFs keep their timing but use fewer frames. Nothing is sent until you press Upload all screens.'),parent=self.root):return
+  path=filedialog.askopenfilename(parent=self.root,title=t('Choose an image or animation'),filetypes=[(t('Images and animations'),'*.png *.jpg *.jpeg *.gif *.webp *.bmp'),(t('All files'),'*.*')])
+  if not path:return
+  fit=self.slot_fit[index].get()
+  if room>=1:
+   return self.submit('Converting image',lambda:convert_media(path,fit,max_frames=room),lambda media:self.screen_media_ready(index,media))
+  filled=sorted({i for i,m in enumerate(self.screen_slots) if m is not None}|{index})
+  quota={i:MAX_FRAMES//len(filled)+(1 if k<MAX_FRAMES%len(filled) else 0) for k,i in enumerate(filled)}
+  jobs=[(i,self.screen_slots[i].source,self.slot_fit[i].get(),quota[i]) for i in filled if i!=index]
+  def work():
+   result={i:convert_media(source,slot_fit,max_frames=q) for i,source,slot_fit,q in jobs}
+   result[index]=convert_media(path,fit,max_frames=quota[index]);return result
+  self.submit('Converting image',work,self.screens_rebalanced)
+ def refit_screen_media(self,index):
+  """Crop / Fit / Stretch changed for a screen: convert its picture again (nothing is sent)."""
+  media=self.screen_slots[index];fit=self.slot_fit[index].get()
+  if media is None or media.fit==fit or self.busy:return
+  path,frames=media.source,len(media.frames)
+  self.submit('Converting image',lambda:convert_media(path,fit,max_frames=frames),lambda result:self.screen_media_ready(index,result))
+ def screens_rebalanced(self,result):
+  for index,media in result.items():self.screen_slots[index]=media
+  self.save_screen_choices();self.refresh_screen_rows()
+  self.status.set(t('Frames shared out between the screens. Nothing has been sent yet; press Upload all screens.'))
+ def is_multi(self):
+  return (self.version or {}).get('reported_crc') in MULTI_SCREEN_CRCS
+ def screen_layout(self):
+  """On 0.10.0 only the separate-screens system is shown; older builds keep the single-image upload."""
+  multi=self.is_multi()
+  if multi:
+   self.single_upload.pack_forget();self.show_image_button.pack_forget()
+   self.screen_modes_note.set(t('The keyboard has 5 screens: 0 is the clock and 1-4 are your screens below. Fn + PgUp / PgDn steps through them; an empty screen shows the clock.'))
+   if not self.flashing:self.media_note.set(t('Choose a picture for each screen below, then press Upload all screens. The preview shows the screen that is on the keyboard now.'))
+  else:
+   if not self.single_upload.winfo_manager():self.single_upload.pack(fill='x',before=self.media_note_label)
+   if not self.show_image_button.winfo_manager():self.show_image_button.pack(side='left',padx=(0,10))
+   self.screen_modes_note.set(t('The keyboard has 5 screen modes (0-4); Fn + PgUp / PgDn steps through them. On Lavender, modes 0-3 all show the clock scene and mode 4 shows your uploaded image/GIF.'))
+ def screen_media_ready(self,index,media):
+  self.screen_slots[index]=media;self.save_screen_choices();self.refresh_screen_rows()
+  self.status.set(t('Screen {n} ready: {count} frames. Nothing has been sent yet.').format(n=index+1,count=len(media.frames)))
+ def clear_screen_media(self,index):
+  self.screen_slots[index]=None;self.save_screen_choices();self.refresh_screen_rows()
+ def send_screens(self):
+  if self.busy:return
+  if (self.version or {}).get('reported_crc') not in MULTI_SCREEN_CRCS:return self.status.set(t('Needs Lavender Quest 0.10.0 (experimental) from the Firmware page. On other builds screens 1-3 show the clock.'))
+  if not any(self.screen_slots):return self.status.set(t('Choose an image for at least one screen.'))
+  if not messagebox.askokcancel(t('Upload all screens'),t('Upload all four screens now?\n\nThis replaces every image on the keyboard, including a single image uploaded earlier. Keep USB connected until it finishes.'),icon='warning',default='cancel',parent=self.root):return
+  slots=list(self.screen_slots);show=next(i+1 for i,m in enumerate(slots) if m is not None)
+  self.flashing=True;self.monitoring=False;self.stop_test();self.media_progress['value']=0
+  self.submit('Uploading screens',lambda:upload_screens(self.settings_client,slots,WORK,show=show,progress=lambda n,total:self.results.put(('media_progress',n,total))),lambda result:self.screens_uploaded(show))
+ def screens_uploaded(self,show):
+  self.flashing=False;self.media_progress['value']=100;self.next_clock_sync=0;self.show_screen_mode(show)
+  self.status.set(t('All screens uploaded. Screen {n} is showing; use the Show buttons or Fn + PgUp to switch.').format(n=show))
+  self.root.after(100,self.read_settings)
  def scrollable(self,name,fill=False):
   """Wrap a page in a vertical scroller so long text never pushes controls out of reach.
 
@@ -605,11 +719,13 @@ class Studio:
  def change_screen(self,mode):
   wireless=bool(self.inventory and self.inventory.get('transport')=='wireless')
   if not wireless and (not self.version or self.version.get('reported_crc') not in LIVE_CLOCK_CRCS):return self.status.set(t('Install Lavender Quest 0.6.0 first.'))
-  if mode==4 and self.parameter_byte(34) in (0,None):return self.status.set(t('Upload an image or GIF first; there is nothing to show yet.'))
+  multi=(self.version or {}).get('reported_crc') in MULTI_SCREEN_CRCS
+  if multi and 1<=mode<=4 and self.parameter_byte(45)==ord('X') and self.parameter_byte(49+(mode-1)*4) in (0,None):return self.status.set(t('Screen {n} is empty on the keyboard; it shows the clock. Upload screens first.').format(n=mode))
+  if mode==4 and not multi and self.parameter_byte(34) in (0,None):return self.status.set(t('Upload an image or GIF first; there is nothing to show yet.'))
   self.submit('Selecting screen',lambda:set_screen(self.settings_client,mode),lambda result:self.screen_changed(mode))
  def screen_changed(self,mode=0):
   self.next_clock_sync=0;self.status.set(t('Lavender desktop selected.') if mode==0 else t('Your image/GIF is now on the keyboard screen.'))
-  self.show_screen_mode(mode)
+  self.show_screen_mode(mode);self.root.after(100,self.read_settings)
  def parameter_byte(self,index):
   """A byte of the keyboard's parameter block as last read (None before the first read)."""
   raw=((self.settings or {}).get('lighting') or {}).get('raw_hex')
@@ -617,7 +733,9 @@ class Studio:
  def show_screen_mode(self,mode=None):
   mode=self.parameter_byte(33) if mode is None else mode
   if mode is None:return
-  self.screen_mode_note.set(t('Showing now: screen {mode} - {what}').format(mode=mode,what=t('your image/GIF') if mode==4 else t('clock scene')))
+  multi=(self.version or {}).get('reported_crc') in MULTI_SCREEN_CRCS
+  what=t('clock scene') if mode==0 else (t('screen {n} image/GIF').format(n=mode) if multi else (t('your image/GIF') if mode==4 else t('clock scene')))
+  self.screen_mode_note.set(t('Showing now: screen {mode} - {what}').format(mode=mode,what=what))
  def clock_preference(self):
   WORK.mkdir(parents=True,exist_ok=True);self.save_preferences(auto_clock=self.auto_clock.get(),clock_interval_minutes=int(self.clock_interval.get()));self.next_clock_sync=0
  def clock_format_preference(self):
@@ -731,7 +849,7 @@ class Studio:
   self.installed.set(t('Installed: {build}  /  CRC {crc}').format(build=known.get(crc,t('Unrecognized build')),crc=crc) if known else t('Installed build: not reported over 2.4 GHz  /  receiver CRC {crc}').format(crc=crc))
   self.status.set(t('Version read complete / {build} / CRC {crc}').format(build=known.get(crc,t('Unknown build')),crc=crc))
   if known and crc not in known:self.firmware_note.set(self.firmware_block_message(crc))
-  self.update_firmware_preview()
+  self.update_firmware_preview();self.refresh_screen_rows()
  def choose_color(self):
   value=colorchooser.askcolor(color=self.color.get(),parent=self.root)[1]
   if value:self.color.set(value)
@@ -1052,10 +1170,17 @@ class Studio:
   elif self.page_name in ('Keymap','Advanced'):self.draw_boards(time.monotonic())
   if self.page_name in self.scrollers:self.scrollers[self.page_name][2]()
   if self.page_name=='Firmware':self.draw_lcd_preview()
-  if self.page_name=='Screen' and not self.media_photos and self.lavender_build():
+  live=self.live_screen_media() if self.page_name=='Screen' and self.is_multi() else None
+  if live is not None:
+   index,media=live;now=time.monotonic()
+   if getattr(self,'live_key',None)!=(index,id(media)):
+    self.live_key=(index,id(media));self.live_photos=[ImageTk.PhotoImage(frame.resize((400,240),Image.Resampling.NEAREST)) for frame in media.frames];self.live_frame=0;self.live_due=0
+   if now>=self.live_due:
+    self.screen_preview.configure(image=self.live_photos[self.live_frame]);self.live_frame=(self.live_frame+1)%len(self.live_photos);self.live_due=now+media.period_ms/1000
+  elif self.page_name=='Screen' and (self.is_multi() or not self.media_photos) and self.lavender_build():
    phase=int(time.monotonic()*4)
    if phase!=getattr(self,'screen_phase',None):self.screen_phase=phase;self.screen_photo=self.lcd_frame(self.lavender_build(),datetime.now(),phase);self.screen_preview.configure(image=self.screen_photo)
-  if self.page_name=='Screen' and self.media_photos and time.monotonic()>=self.media_due:
+  if self.page_name=='Screen' and not self.is_multi() and self.media_photos and time.monotonic()>=self.media_due:
    self.screen_preview.configure(image=self.media_photos[self.media_frame]);self.media_frame=(self.media_frame+1)%len(self.media_photos);self.media_due=time.monotonic()+self.prepared.period_ms/1000
   self.root.after(50 if self.page_name in ('Screen','Lighting','Firmware') else 130,self.animate)
  def smoke_done(self):

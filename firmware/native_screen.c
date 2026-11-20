@@ -1,4 +1,5 @@
-/* X68 V0113 display-only replacement. No charger, GPIO, flash or USB writes.
+/* X68 V0113 display-only replacement (Lavender Quest 0.10.0 multi-screen).
+ * No charger, GPIO, flash or USB writes.
  * The original LCD transport and its ready guard remain in use.
  * Fixed addresses are valid ONLY for the hash-gated V0113 image.
  */
@@ -12,16 +13,38 @@ __declspec(dllexport) u32 tick;
 __declspec(dllexport) u8 battery_level;
 __declspec(dllexport) u8 os_mode,win_lock;
 __declspec(dllexport) u8 media_data[245760];
-__declspec(dllexport) u8 media_mode,media_count;
-__declspec(dllexport) u32 media_period;
+__declspec(dllexport) u8 params[64];
 static u8 read_clock(int reg) { return rtc[reg]; }
 #define FB framebuffer
 #define BG background
+#define PARAM ((const volatile u8 *)params)
 #else
 #define FB ((volatile u8 *)0x000819e0)
 #define BG ((const u8 *)0x20031664)
+/* Live parameter block (GP - 2B0). Read only here; the app writes it with command 06. */
+#define PARAM ((const volatile u8 *)0x00080550)
 static u8 read_clock(int reg) { return ((u8 (*)(int))0x2000f4f4)(reg); }
 #endif
+
+/* Multi-screen media. Screen mode (parameter 33) 0 is always the Lavender
+ * desktop. Modes 1-4 each play their own frames from the existing 8-frame bank
+ * (A2000..DE000) when the screen table is present: parameter 45..47 = 'X','S',1,
+ * then four entries at 48 + (mode-1)*4: first frame, frame count, period LE16 ms.
+ * Without the table, mode 4 keeps the original single-media fields (34, 42-43).
+ * Stock V0113 code never reads parameters 45..63 (static scan of every
+ * gp-relative, ADDIGP-based and absolute access). Any invalid or empty entry
+ * shows the desktop instead, so a bad table can never point outside the bank. */
+static inline __attribute__((always_inline)) int media_slot(unsigned *first,unsigned *count,unsigned *period) {
+ unsigned mode=PARAM[33];
+ if(mode<1 || mode>4)return 0;
+ if(PARAM[45]=='X' && PARAM[46]=='S' && PARAM[47]==1){
+  const volatile u8 *entry=PARAM+48+(mode-1)*4;
+  *first=entry[0];*count=entry[1];*period=entry[2]|((unsigned)entry[3]<<8);
+ }else if(mode==4){
+  *first=0;*count=PARAM[34];*period=PARAM[42]|((unsigned)PARAM[43]<<8);
+ }else return 0;
+ return *count>=1 && *first<8 && *count<=8-*first && *period>=50 && *period<=5000;
+}
 
 static const u8 numbers[10][7] = {
  {14,17,19,21,25,17,14}, {4,12,4,4,4,4,14},
@@ -77,13 +100,11 @@ void render(void) {
  ((void (*)(void))0x00006eac)();
  if (*(volatile u8 *)0x00080cf1) return;
  if (*(volatile u8 *)0x00080c9a & 128) return;
- /* Only explicit custom-media mode is separate; all old default modes use
-  * the same Lavender desktop. Physical flash reads use the stock callback. */
- if(*(volatile u8 *)0x00080571==4){
-  unsigned count=*(volatile u8 *)0x00080572;
-  unsigned period=*(volatile u8 *)0x0008057a|((unsigned)*(volatile u8 *)0x0008057b<<8);
-  if(count<1 || count>8 || period<50 || period>5000)return;
-  unsigned frame=(*(volatile u32 *)0x80140200/(period*16000))%count;
+ /* Screens 1-4 play their own media slot; screen 0, and any empty slot, uses
+  * the Lavender desktop. Physical flash reads use the stock callback. */
+ unsigned first,count,period;
+ if(media_slot(&first,&count,&period)){
+  unsigned frame=first+(*(volatile u32 *)0x80140200/(period*16000))%count;
   if(*(volatile u8 *)0x00080d82==212 && *(volatile u8 *)0x00080d49==frame)return;
   void (*read_flash)(u32,u32,volatile u8 *)=*(void (**)(u32,u32,volatile u8 *))0x00000bb4;
   read_flash(0x000a2000+frame*30720,30720,FB);
@@ -93,8 +114,9 @@ void render(void) {
  *(volatile u8 *)0x00080d82=0;
 #endif
 #ifdef SCREEN_HOST
- if(media_mode==4 && media_count>=1 && media_count<=8 && media_period>=50 && media_period<=5000){
-  unsigned frame=(tick/(media_period*16000))%media_count;
+ unsigned first,count,period;
+ if(media_slot(&first,&count,&period)){
+  unsigned frame=first+(tick/(period*16000))%count;
   for(unsigned i=0;i<30720;i++)FB[i]=media_data[frame*30720+i];return;
  }
  u8 second=read_clock(2),minute=read_clock(3),hour=read_clock(4)&63;

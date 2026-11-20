@@ -28,6 +28,7 @@ FEATURES = {
     'lavender-quest-0.9.0': {'twelve': True, 'header': 'text'},
     'lavender-quest-0.9.1': {'twelve': True, 'header': 'badges', 'win': (0x55ff, 0x7f7b, 0x3598, 0x4e9f), 'rail': True},
     'lavender-quest-0.9.2': {'twelve': True, 'header': 'badges', 'win': (0xed3d, 0xb79a, 0xacdd, 0xf691), 'rail': False},
+    'lavender-quest-0.10.0': {'twelve': True, 'header': 'badges', 'win': (0xed3d, 0xb79a, 0xacdd, 0xf691), 'rail': False},
 }
 
 NUMBERS = ((14, 17, 19, 21, 25, 17, 14), (4, 12, 4, 4, 4, 4, 14), (14, 17, 1, 2, 4, 8, 31), (30, 1, 1, 14, 1, 1, 30),

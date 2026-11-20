@@ -498,11 +498,11 @@ TR = {
     'X68.EXE, CLOCK, DAY-MO, START and READY: decorative pixel-game text. They have no function.':
         'X68.EXE, CLOCK, DAY-MO, START ve READY: piksel oyun havası veren süs yazıları. Bir işlevleri yok.',
     'The bunny blinks and the coin spins: animation only.': 'Tavşanın göz kırpması ve dönen altın para: yalnızca animasyon.',
-    'Fn + PgUp steps through the screen modes. On Lavender the first modes all show this same clock scene and the last one shows your uploaded image/GIF, so press it a few times until your image appears. The Screen page buttons switch directly.':
-        "Fn + PgUp ekran modları arasında sırayla gezer. Lavender'da ilk modların hepsi bu saat sahnesini, sonuncusu ise yüklediğiniz resmi/GIF'i gösterir; resminiz gelene kadar birkaç kez basın. Ekran sayfasındaki düğmeler doğrudan geçiş yapar.",
+    'Fn + PgUp steps through the screen modes 0-4. On 0.10.0 screen 0 is the clock and screens 1-4 each show their own image (an empty one shows the clock). On older builds modes 0-3 all show the clock and mode 4 shows your image. The Screen page buttons switch directly.':
+        "Fn + PgUp 0-4 arası ekran modlarında sırayla gezer. 0.10.0'da 0. ekran saattir, 1-4. ekranların her biri kendi resmini gösterir (boş olan saati gösterir). Eski sürümlerde 0-3 arası modların hepsi saati, 4. mod resminizi gösterir. Ekran sayfasındaki düğmeler doğrudan geçiş yapar.",
 
     # Screen picker
-    'Show my image/GIF': 'Resmimi/GIF\'imi göster',
+    'Show my image/GIF': 'Resmimi göster',
     'Connect the keyboard to see which screen is showing.': 'Hangi ekranın açık olduğunu görmek için klavyeyi bağlayın.',
     'The keyboard has 5 screen modes (0-4); Fn + PgUp / PgDn steps through them. On Lavender, modes 0-3 all show the clock scene and mode 4 shows your uploaded image/GIF.':
         'Klavyede 5 ekran modu var (0-4); Fn + PgUp / PgDn bunlar arasında sırayla gezer. Lavender\'da 0-3 arası modların hepsi saat sahnesini, 4. mod ise yüklediğiniz resmi/GIF\'i gösterir.',
@@ -511,6 +511,44 @@ TR = {
     'Showing now: screen {mode} - {what}': 'Şu an açık: {mode}. ekran - {what}',
     'your image/GIF': 'sizin resminiz/GIF\'iniz',
     'clock scene': 'saat sahnesi',
+
+    # Separate screens (0.10.0)
+    'SEPARATE SCREENS': 'AYRI EKRANLAR',
+    'With Lavender Quest 0.10.0, screens 1-4 each show their own image or GIF and Fn + PgUp steps through them. Screen 0 is always the clock. All screens share 8 frames.':
+        'Lavender Quest 0.10.0 ile 1-4. ekranların her biri kendi resmini veya GIF\'ini gösterir; Fn + PgUp aralarında gezer. 0. ekran her zaman saattir. Tüm ekranlar toplam 8 kareyi paylaşır.',
+    'Screen {n}': 'Ekran {n}',
+    'empty': 'boş',
+    '{count} frames': '{count} kare',
+    'Choose': 'Seç',
+    'Clear': 'Temizle',
+    'Show': 'Göster',
+    'Frames used: {used} / {total}': 'Kullanılan kare: {used} / {total}',
+    'Upload all screens': 'Tüm ekranları yükle',
+    'Needs Lavender Quest 0.10.0 (experimental) from the Firmware page. On other builds screens 1-3 show the clock.':
+        'Firmware sayfasından Lavender Quest 0.10.0 (deneysel) gerekir. Diğer sürümlerde 1-3. ekranlar saati gösterir.',
+    'No frames left. Clear another screen first.': 'Boş kare kalmadı. Önce başka bir ekranı temizleyin.',
+    'Screen {n} ready: {count} frames. Nothing has been sent yet.': '{n}. ekran hazır: {count} kare. Henüz hiçbir şey gönderilmedi.',
+    'Choose an image for at least one screen.': 'En az bir ekran için resim seçin.',
+    'Upload all four screens now?\n\nThis replaces every image on the keyboard, including a single image uploaded earlier. Keep USB connected until it finishes.':
+        'Dört ekran şimdi yüklensin mi?\n\nBu, klavyedeki tüm resimlerin yerine geçer; daha önce tek başına yüklenen resim de dahil. Bitene kadar USB bağlı kalsın.',
+    'All screens uploaded. Screen {n} is showing; use the Show buttons or Fn + PgUp to switch.':
+        'Tüm ekranlar yüklendi. Şu an {n}. ekran açık; geçmek için Göster düğmelerini veya Fn + PgUp\'ı kullanın.',
+    'screen {n} image/GIF': '{n}. ekranın resmi/GIF\'i',
+    'Screen {n} is empty on the keyboard; it shows the clock. Upload screens first.': '{n}. ekran klavyede boş, saati gösteriyor. Önce ekranları yükleyin.',
+    'Uploading screens': 'Ekranlar yükleniyor',
+    'Experimental. The same screen as 0.9.2, plus screens 1-4 can each show their own image or GIF (Screen page). Built and emulator-tested in this fork; not yet reviewed by the original author.':
+        'Deneysel. 0.9.2 ile aynı ekran; ek olarak 1-4. ekranların her biri kendi resmini veya GIF\'ini gösterebilir (Ekran sayfası). Bu fork\'ta derlendi ve emülatörde test edildi; orijinal geliştirici henüz incelemedi.',
+
+    # Screen page on 0.10.0
+    'No frames left': 'Boş kare kalmadı',
+    'All 8 frames are in use. Share them out evenly between the screens so this one fits too? GIFs keep their timing but use fewer frames. Nothing is sent until you press Upload all screens.':
+        '8 karenin hepsi kullanılıyor. Bu ekran da sığsın diye kareler ekranlara eşit paylaştırılsın mı? GIF\'ler zamanlamasını korur ama daha az kare kullanır. Tüm ekranları yükle\'ye basana kadar hiçbir şey gönderilmez.',
+    'Frames shared out between the screens. Nothing has been sent yet; press Upload all screens.':
+        'Kareler ekranlara paylaştırıldı. Henüz hiçbir şey gönderilmedi; Tüm ekranları yükle\'ye basın.',
+    'The keyboard has 5 screens: 0 is the clock and 1-4 are your screens below. Fn + PgUp / PgDn steps through them; an empty screen shows the clock.':
+        'Klavyede 5 ekran var: 0 saat, 1-4 aşağıdaki sizin ekranlarınız. Fn + PgUp / PgDn aralarında sırayla gezer; boş ekran saati gösterir.',
+    'Choose a picture for each screen below, then press Upload all screens. The preview shows the screen that is on the keyboard now.':
+        'Aşağıda her ekran için bir resim seçin, sonra Tüm ekranları yükle\'ye basın. Önizleme klavyede şu an açık olan ekranı gösterir.',
 
     # Background operations (shown as "<name>..." and "<name> complete.")
     '{operation} complete.': '{operation} tamamlandı.',

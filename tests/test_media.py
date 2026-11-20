@@ -6,7 +6,8 @@ from pathlib import Path
 from PIL import Image
 from x68.media import convert_media,rgb565,media_packet,MAX_BYTES,upload_media,PreparedMedia
 from x68.protocol import ProtocolError
-from x68.firmware import LIVE_CLOCK_CRC
+from x68.firmware import LIVE_CLOCK_CRC, MULTI_SCREEN_CRC
+from x68.media import upload_screens, screen_table, set_screen
 
 class MemoryMedia:
  def __init__(self,crc=LIVE_CLOCK_CRC,short=False):
@@ -31,7 +32,8 @@ class MediaTests(unittest.TestCase):
    self.assertEqual(client.writes[0][33],0);self.assertEqual(client.writes[-1][33:35],bytes([4,1]))
    self.assertEqual(b''.join(p[8:8+p[4]] for p in client.packets),media.data)
    self.assertEqual(int.from_bytes(client.packets[0][5:8],'little'),0)
-   for i in set(range(64))-{33,34,42,43}:self.assertEqual(client.data[i],client.before[i])
+   for i in set(range(64))-{33,34,42,43,45,46,47}:self.assertEqual(client.data[i],client.before[i])
+   self.assertEqual(client.data[45:48],bytes(3))  # a single upload switches any multi-screen table off
  def test_short_write_stops_without_retry_or_selecting_partial_media(self):
   client=MemoryMedia(short=True);media=PreparedMedia('generated-test',[Image.new('RGB',(160,96))],100,1,100,'Crop')
   with tempfile.TemporaryDirectory() as folder,patch('x68.media.time.sleep'):
@@ -68,3 +70,34 @@ class MediaTests(unittest.TestCase):
   self.assertEqual(int.from_bytes(p[1:3],'little'),sum(p[3:])&65535)
  def test_invalid_fitting_mode_rejected(self):
   with self.assertRaises(ValueError):convert_media('unused','invented')
+
+class MultiScreenTests(unittest.TestCase):
+ def media(self,frames,period=100):
+  return PreparedMedia('generated-test',[Image.new('RGB',(160,96),(i*30,0,0)) for i in range(frames)],period,frames,frames*period,'Crop')
+ def test_table_packs_frames_in_screen_order(self):
+  self.assertEqual(screen_table([self.media(1),None,self.media(3,120),self.media(2)]),[(0,1,100),None,(1,3,120),(4,2,100)])
+ def test_table_refuses_more_than_eight_frames_or_nothing(self):
+  with self.assertRaises(ProtocolError):screen_table([self.media(5),self.media(4),None,None])
+  with self.assertRaises(ProtocolError):screen_table([None]*4)
+ def test_upload_writes_one_bank_then_the_table(self):
+  client=MemoryMedia(crc=MULTI_SCREEN_CRC);slots=[self.media(1),None,self.media(2,150),None]
+  with tempfile.TemporaryDirectory() as folder,patch('x68.media.time.sleep'):
+   result=upload_screens(client,slots,folder,show=3)
+  self.assertEqual(result['phase'],'complete')
+  self.assertEqual(client.writes[0][33],0)  # left the player before erasing the bank
+  self.assertEqual(b''.join(p[8:8+p[4]] for p in client.packets),slots[0].data+slots[2].data)
+  final=client.writes[-1]
+  self.assertEqual(final[33],3);self.assertEqual(final[45:48],b'XS')
+  self.assertEqual(final[34],3)  # non-zero, so stock Fn+PgUp also reaches screen 4
+  self.assertEqual(final[48:64],bytes([0,1,100,0, 0,0,0,0, 1,2,150,0, 0,0,0,0]))
+  for i in set(range(64))-{33,34}-set(range(45,64)):self.assertEqual(final[i],client.before[i])
+ def test_upload_refused_without_the_multi_screen_build(self):
+  client=MemoryMedia(crc=LIVE_CLOCK_CRC)
+  with tempfile.TemporaryDirectory() as folder:
+   with self.assertRaises(ProtocolError):upload_screens(client,[self.media(1),None,None,None],folder)
+  self.assertEqual(client.writes,[]);self.assertEqual(client.packets,[])
+ def test_set_screen_accepts_the_five_measured_modes_only(self):
+  client=MemoryMedia()
+  for mode in range(5):set_screen(client,mode);self.assertEqual(client.data[33],mode)
+  with self.assertRaises(ProtocolError):set_screen(client,5)
+
